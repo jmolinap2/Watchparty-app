@@ -1,0 +1,12 @@
+<article class="metric-card">
+    <span>@Label</span>
+    <strong>@Value</strong>
+</article>
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public long Value { get; set; }
+}

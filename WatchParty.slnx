@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/apps/" />
+  <Folder Name="/apps/admin/">
+    <Project Path="apps/admin/WatchParty.Admin.csproj" />
+  </Folder>
+  <Folder Name="/backend/" />
+  <Folder Name="/backend/src/">
+    <Project Path="backend/src/WatchParty.Api/WatchParty.Api.csproj" />
+    <Project Path="backend/src/WatchParty.Application/WatchParty.Application.csproj" />
+    <Project Path="backend/src/WatchParty.Contracts/WatchParty.Contracts.csproj" />
+    <Project Path="backend/src/WatchParty.Domain/WatchParty.Domain.csproj" />
+    <Project Path="backend/src/WatchParty.Infrastructure/WatchParty.Infrastructure.csproj" />
+    <Project Path="backend/src/WatchParty.Migrator/WatchParty.Migrator.csproj" />
+  </Folder>
+  <Folder Name="/backend/tests/">
+    <Project Path="backend/tests/WatchParty.Tests/WatchParty.Tests.csproj" />
+  </Folder>
+</Solution>

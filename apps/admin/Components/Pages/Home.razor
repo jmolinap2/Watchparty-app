@@ -1,0 +1,293 @@
+@page "/"
+@rendermode InteractiveServer
+@inject AdminApiClient Api
+
+<PageTitle>WatchParty Admin</PageTitle>
+
+<section class="admin-shell">
+    <header class="admin-header">
+        <div>
+            <h1>WatchParty Admin</h1>
+            <p>Usuarios, salas, reportes, dominios, metricas y auditoria.</p>
+        </div>
+        <div class="token-box">
+            <input type="password" placeholder="JWT admin" @bind="token" @bind:event="oninput" />
+            <button class="primary" @onclick="LoadAsync" disabled="@loading">Actualizar</button>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <div class="notice">@message</div>
+    }
+
+    @if (snapshot is not null)
+    {
+        <section class="metric-grid">
+            <MetricCard Label="Usuarios" Value="@snapshot.Metrics.RegisteredUsers" />
+            <MetricCard Label="Activos" Value="@snapshot.Metrics.ActiveUsers" />
+            <MetricCard Label="Salas" Value="@snapshot.Metrics.RoomsCreated" />
+            <MetricCard Label="Salas activas" Value="@snapshot.Metrics.ActiveRooms" />
+            <MetricCard Label="Mensajes" Value="@snapshot.Metrics.MessagesSent" />
+            <MetricCard Label="Reportes abiertos" Value="@snapshot.Metrics.OpenReports" />
+            <MetricCard Label="Errores video" Value="@snapshot.Metrics.PlaybackErrors" />
+            <MetricCard Label="Reconexiones" Value="@snapshot.Metrics.SignalrReconnections" />
+        </section>
+
+        <section class="panel">
+            <div class="panel-title">
+                <h2>Usuarios</h2>
+                <span>@snapshot.Users.TotalCount total</span>
+            </div>
+            <table>
+                <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Nombre</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var user in snapshot.Users.Items)
+                {
+                    <tr>
+                        <td>@user.Email</td>
+                        <td>@user.DisplayName</td>
+                        <td>@user.Role</td>
+                        <td>@(user.IsBlocked ? "Bloqueado" : "Activo")</td>
+                        <td class="actions">
+                            @if (user.IsBlocked)
+                            {
+                                <button @onclick="() => UnblockUserAsync(user.Id)">Desbloquear</button>
+                            }
+                            else
+                            {
+                                <button @onclick="() => BlockUserAsync(user.Id)">Bloquear</button>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </section>
+
+        <section class="panel">
+            <div class="panel-title">
+                <h2>Salas</h2>
+                <span>@snapshot.Rooms.TotalCount total</span>
+            </div>
+            <table>
+                <thead>
+                <tr>
+                    <th>Codigo</th>
+                    <th>Nombre</th>
+                    <th>Estado</th>
+                    <th>Miembros</th>
+                    <th>Online</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var room in snapshot.Rooms.Items)
+                {
+                    <tr>
+                        <td>@room.Code</td>
+                        <td>@room.Name</td>
+                        <td>@room.Status</td>
+                        <td>@room.MemberCount</td>
+                        <td>@room.OnlineCount</td>
+                        <td class="actions">
+                            @if (!string.Equals(room.Status, "Closed", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <button @onclick="() => CloseRoomAsync(room.Id)">Cerrar</button>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </section>
+
+        <section class="panel">
+            <div class="panel-title">
+                <h2>Reportes</h2>
+                <span>@snapshot.Reports.TotalCount total</span>
+            </div>
+            <table>
+                <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Motivo</th>
+                    <th>Estado</th>
+                    <th>Creado</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var report in snapshot.Reports.Items)
+                {
+                    <tr>
+                        <td>@report.Type</td>
+                        <td>@report.Reason</td>
+                        <td>@report.Status</td>
+                        <td>@report.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+                        <td class="actions">
+                            @if (string.Equals(report.Status, "Open", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <button @onclick="() => ResolveReportAsync(report.Id)">Resolver</button>
+                                <button @onclick="() => RejectReportAsync(report.Id)">Rechazar</button>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </section>
+
+        <section class="panel">
+            <div class="panel-title">
+                <h2>Dominios permitidos</h2>
+                <div class="inline-form">
+                    <input placeholder="cdn.example.com" @bind="newDomain" @bind:event="oninput" />
+                    <button @onclick="AddDomainAsync">Agregar</button>
+                </div>
+            </div>
+            <table>
+                <thead>
+                <tr>
+                    <th>Host</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var domain in snapshot.Domains)
+                {
+                    <tr>
+                        <td>@domain.Host</td>
+                        <td>@(domain.IsEnabled ? "Permitido" : "Deshabilitado")</td>
+                        <td class="actions">
+                            <button @onclick="() => ToggleDomainAsync(domain.Id, !domain.IsEnabled)">
+                                @(domain.IsEnabled ? "Deshabilitar" : "Habilitar")
+                            </button>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </section>
+
+        <section class="panel">
+            <div class="panel-title">
+                <h2>Auditoria</h2>
+                <span>@snapshot.AuditLogs.TotalCount total</span>
+            </div>
+            <table>
+                <thead>
+                <tr>
+                    <th>Categoria</th>
+                    <th>Accion</th>
+                    <th>Recurso</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var log in snapshot.AuditLogs.Items)
+                {
+                    <tr>
+                        <td>@log.Category</td>
+                        <td>@log.Action</td>
+                        <td>@(log.Resource ?? log.TargetType ?? "-")</td>
+                        <td>@(log.StatusCode?.ToString() ?? "-")</td>
+                        <td>@log.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </section>
+    }
+</section>
+
+@code {
+    private string token = string.Empty;
+    private string newDomain = string.Empty;
+    private string message = "Pega un JWT con rol Admin para cargar el panel.";
+    private bool loading;
+    private AdminSnapshot? snapshot;
+
+    private async Task LoadAsync()
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            message = "Token requerido.";
+            return;
+        }
+
+        await RunAsync(async () =>
+        {
+            snapshot = await Api.LoadAsync(token);
+            message = $"Actualizado {DateTime.Now:t}.";
+        });
+    }
+
+    private Task BlockUserAsync(Guid userId) =>
+        RunAndReloadAsync(() => Api.BlockUserAsync(token, userId, "Bloqueado desde panel admin."));
+
+    private Task UnblockUserAsync(Guid userId) =>
+        RunAndReloadAsync(() => Api.UnblockUserAsync(token, userId));
+
+    private Task CloseRoomAsync(Guid roomId) =>
+        RunAndReloadAsync(() => Api.CloseRoomAsync(token, roomId));
+
+    private Task ResolveReportAsync(Guid reportId) =>
+        RunAndReloadAsync(() => Api.ResolveReportAsync(token, reportId, "Resuelto desde panel admin."));
+
+    private Task RejectReportAsync(Guid reportId) =>
+        RunAndReloadAsync(() => Api.RejectReportAsync(token, reportId, "Rechazado desde panel admin."));
+
+    private async Task AddDomainAsync()
+    {
+        var host = newDomain.Trim();
+        if (host.Length == 0)
+        {
+            message = "Host requerido.";
+            return;
+        }
+
+        await RunAndReloadAsync(() => Api.AddAllowedDomainAsync(token, host));
+        newDomain = string.Empty;
+    }
+
+    private Task ToggleDomainAsync(Guid id, bool enabled) =>
+        RunAndReloadAsync(() => Api.ToggleDomainAsync(token, id, enabled));
+
+    private async Task RunAndReloadAsync(Func<Task> action)
+    {
+        await RunAsync(async () =>
+        {
+            await action();
+            snapshot = await Api.LoadAsync(token);
+            message = $"Accion aplicada {DateTime.Now:t}.";
+        });
+    }
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        loading = true;
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            message = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+}

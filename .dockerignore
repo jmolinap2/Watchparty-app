@@ -1,0 +1,12 @@
+# Repo-root build context (backend/Dockerfile). Keep the context small.
+**/bin
+**/obj
+**/.vs
+**/.git
+**/.github
+**/node_modules
+**/.next
+**/.expo
+apps
+docs
+*.md

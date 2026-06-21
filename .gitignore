@@ -1,0 +1,107 @@
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+.vs/
+*.swp
+*.swo
+
+# Visual Studio IDE
+.vscode/
+.vsconfig
+*.sln.docstates
+.dtbcache.v2
+*.navx
+*.personalizer
+.vs/
+FileContentIndex/
+*.visidx
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.local.example
+!.env.development.example
+!.env.staging.example
+!.env.production.example
+
+# .NET
+bin/
+obj/
+TestResults/
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+*.nupkg
+*.snupkg
+coverage/
+coverage.*
+*.trx
+
+# ASP.NET / Blazor
+appsettings.*.local.json
+wwwroot/lib/
+
+# Node / React / Next.js / Expo
+node_modules/
+.next/
+out/
+dist/
+build/
+.turbo/
+.vercel/
+.expo/
+.expo-shared/
+web-build/
+coverage-final.json
+
+# React Native / Expo native outputs
+android/
+ios/
+*.jks
+*.keystore
+*.mobileprovision
+*.p8
+*.p12
+
+# Package manager caches
+.npm/
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# TypeScript
+*.tsbuildinfo
+
+# Docker and local infrastructure
+docker-data/
+infra/postgres/data/
+infra/redis/data/
+infra/nginx/certs/
+
+# Local databases and generated storage
+*.db
+*.sqlite
+*.sqlite3
+storage/
+uploads/
+
+# Build artifacts
+artifacts/
+publish/
+release/
