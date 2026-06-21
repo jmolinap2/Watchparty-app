@@ -41,9 +41,24 @@ try
         {
             var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
                 ?? ["http://localhost:3000", "http://localhost:19006", "http://localhost:8081"];
+            var allowedOrigins = origins
+                .Select(origin => origin.TrimEnd('/'))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var allowDevTunnels = builder.Configuration.GetValue("Cors:AllowDevTunnels", builder.Environment.IsDevelopment());
 
             policy
-                .WithOrigins(origins)
+                .SetIsOriginAllowed(origin =>
+                {
+                    if (allowedOrigins.Contains(origin.TrimEnd('/')))
+                    {
+                        return true;
+                    }
+
+                    return allowDevTunnels
+                        && Uri.TryCreate(origin, UriKind.Absolute, out var uri)
+                        && string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+                        && uri.Host.EndsWith(".devtunnels.ms", StringComparison.OrdinalIgnoreCase);
+                })
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials();

@@ -22,16 +22,36 @@ pnpm dev
 La app corre en:
 
 ```text
-http://localhost:3000
+http://localhost:4321
 ```
 
-La API debe estar corriendo y debe permitir `http://localhost:3000` en `Cors:AllowedOrigins`. La configuracion de desarrollo del backend ya incluye ese origen por defecto.
+La API debe estar corriendo y debe permitir `http://localhost:4321` en `Cors:AllowedOrigins`. La configuracion de desarrollo del backend ya incluye ese origen por defecto y tambien permite Dev Tunnels (`*.devtunnels.ms`) para pruebas desde celular.
+
+Para probar desde un celular, usa el Dev Tunnel de la web, no el del admin. Si el API tunnel es:
+
+```text
+https://abc123-44331.use2.devtunnels.ms
+```
+
+la web suele quedar en:
+
+```text
+https://abc123-4321.use2.devtunnels.ms
+```
+
+Tambien puedes iniciar con:
+
+```powershell
+.\Start-Dev.ps1 -ApiTunnelUrl "https://abc123-44331.use2.devtunnels.ms"
+```
+
+El script configura `NEXT_PUBLIC_API_URL` e imprime la URL recomendada para el celular.
 
 ## Ambiente
 
 | Variable | Descripcion | Valor por defecto |
 |---|---|---|
-| `NEXT_PUBLIC_API_URL` | URL base de la API, sin slash final | `http://localhost:5210` |
+| `NEXT_PUBLIC_API_URL` | URL base de la API, sin slash final | `https://localhost:44331` |
 
 ## Scripts
 
