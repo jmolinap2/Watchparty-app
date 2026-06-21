@@ -2,7 +2,28 @@ namespace WatchParty.Contracts.Identity;
 
 public sealed record RegisterRequest(string Email, string Password, string DisplayName);
 
-public sealed record LoginRequest(string Email, string Password);
+public sealed class LoginRequest
+{
+    public string? Identifier { get; init; }
+    public string? Email { get; init; }
+    public string? Username { get; init; }
+    public string Password { get; init; } = string.Empty;
+
+    public string LoginIdentifier => FirstNonEmpty(Identifier, Username, Email);
+
+    private static string FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return string.Empty;
+    }
+}
 
 public sealed record RefreshTokenRequest(string RefreshToken);
 

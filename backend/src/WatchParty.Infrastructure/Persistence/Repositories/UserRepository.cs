@@ -15,11 +15,17 @@ public sealed class UserRepository(WatchPartyDbContext dbContext) : IUserReposit
         return dbContext.Users.FirstOrDefaultAsync(user => user.Email == email, cancellationToken);
     }
 
+    public Task<User?> GetByUsernameAsync(string normalizedUsername, CancellationToken cancellationToken) =>
+        dbContext.Users.FirstOrDefaultAsync(user => user.Username == normalizedUsername, cancellationToken);
+
     public Task<bool> EmailExistsAsync(string normalizedEmail, CancellationToken cancellationToken)
     {
         var email = Email.FromTrusted(normalizedEmail);
         return dbContext.Users.AnyAsync(user => user.Email == email, cancellationToken);
     }
+
+    public Task<bool> UsernameExistsAsync(string normalizedUsername, CancellationToken cancellationToken) =>
+        dbContext.Users.AnyAsync(user => user.Username == normalizedUsername, cancellationToken);
 
     public async Task AddAsync(User user, CancellationToken cancellationToken) =>
         await dbContext.Users.AddAsync(user, cancellationToken);

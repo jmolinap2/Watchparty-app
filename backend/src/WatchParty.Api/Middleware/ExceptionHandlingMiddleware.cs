@@ -21,18 +21,24 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
         }
         catch (ValidationException validationException)
         {
+            var correlationId = GetOrCreateCorrelationId(context);
             await WriteAsync(
                 context,
                 StatusCodes.Status400BadRequest,
-                new ApiErrorResponse("validation_failed", "One or more validation errors occurred.", validationException.Errors));
+                new ApiErrorResponse(
+                    "validation_failed",
+                    "One or more validation errors occurred.",
+                    validationException.Errors,
+                    correlationId));
         }
         catch (Exception exception)
         {
+            var correlationId = GetOrCreateCorrelationId(context);
             logger.LogError(exception, "Unhandled exception processing {Method} {Path}", context.Request.Method, context.Request.Path);
             await WriteAsync(
                 context,
                 StatusCodes.Status500InternalServerError,
-                new ApiErrorResponse("server_error", "An unexpected error occurred."));
+                new ApiErrorResponse("server_error", "An unexpected error occurred.", CorrelationId: correlationId));
         }
     }
 
@@ -48,7 +54,26 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
         context.Response.Clear();
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/json";
+        context.Response.Headers.TryAdd("X-Correlation-ID", body.CorrelationId ?? context.TraceIdentifier);
         await context.Response.WriteAsync(JsonSerializer.Serialize(body, JsonOptions));
+    }
+
+    private static string GetOrCreateCorrelationId(HttpContext context)
+    {
+        const string headerName = "X-Correlation-ID";
+        if (context.Response.Headers.TryGetValue(headerName, out var outgoing)
+            && !string.IsNullOrWhiteSpace(outgoing))
+        {
+            return outgoing.ToString();
+        }
+
+        if (context.Request.Headers.TryGetValue(headerName, out var incoming)
+            && !string.IsNullOrWhiteSpace(incoming))
+        {
+            return incoming.ToString();
+        }
+
+        return context.TraceIdentifier;
     }
 }
 

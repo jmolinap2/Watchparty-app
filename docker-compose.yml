@@ -1,8 +1,12 @@
 # Local/staging orchestration for WatchParty.
 #
-# Everything is reachable through nginx on http://localhost:8080
-#   /            -> web (Next.js)
-#   /api, /hubs  -> api (ASP.NET Core)
+# Public entry points:
+#   http://localhost:8080          nginx → web (Next.js) + api (ASP.NET Core)
+#     /            -> web
+#     /api, /hubs  -> api
+#     /swagger     -> api (dev)
+#     /health      -> api
+#   http://localhost:8090          admin (Blazor Server, direct — no subpath needed)
 #
 # The API auto-migrates and seeds on startup (admin user + allowed media hosts).
 # Override secrets via a .env file next to this one (see .env.example).
@@ -54,14 +58,19 @@ services:
       Database__AutoMigrate: "true"
       Cors__AllowedOrigins__0: ${PUBLIC_ORIGIN:-http://localhost:8080}
       Cors__AllowedOrigins__1: "http://localhost:3000"
-      Seed__AdminEmail: ${SEED_ADMIN_EMAIL:-admin@watchparty.local}
-      Seed__AdminPassword: ${SEED_ADMIN_PASSWORD:-ChangeMe123!}
+      Seed__AdminEmail: ${SEED_ADMIN_EMAIL:-admin@aspnetboilerplate.com}
+      Seed__AdminPassword: ${SEED_ADMIN_PASSWORD:-123qwe}
       Seed__AdminDisplayName: "Administrator"
+      Seed__AdminUsername: ${SEED_ADMIN_USERNAME:-admin}
+      WatchPartyLogs__Directory: ${WATCHPARTY_LOG_DIR:-/app/logs}
+      WatchPartyLogs__FileName: ${WATCHPARTY_API_LOG_FILE:-watchparty-api.log}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 15s
@@ -84,6 +93,30 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+    restart: unless-stopped
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      BackendApi__BaseUrl: "http://api:8080"
+      WatchPartyLogs__Directory: ${WATCHPARTY_LOG_DIR:-/app/logs}
+      WatchPartyLogs__FileName: ${WATCHPARTY_ADMIN_LOG_FILE:-watchparty-admin.log}
+    ports:
+      - "${ADMIN_PORT:-8090}:8090"
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8090/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   nginx:

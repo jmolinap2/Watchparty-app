@@ -129,6 +129,9 @@ public sealed class WatchPartyDbContext(
                 .Metadata.SetValueComparer(emailComparer);
             builder.Property(user => user.Email).HasMaxLength(Email.MaxLength).IsRequired();
             builder.HasIndex(user => user.Email).IsUnique();
+            builder.Property(user => user.Username).HasMaxLength(User.MaxUsernameLength);
+            // Filtered unique index: usernames are optional, but any value present must be unique.
+            builder.HasIndex(user => user.Username).IsUnique().HasFilter("\"Username\" IS NOT NULL");
             builder.Property(user => user.PasswordHash).HasMaxLength(512).IsRequired();
             builder.Property(user => user.DisplayName).HasMaxLength(User.MaxDisplayNameLength).IsRequired();
             builder.Property(user => user.AvatarUrl).HasMaxLength(2048);

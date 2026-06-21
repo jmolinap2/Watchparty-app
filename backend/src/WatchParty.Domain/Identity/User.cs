@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using WatchParty.Domain.Common;
 using WatchParty.Domain.Identity.Events;
 
@@ -8,9 +9,11 @@ namespace WatchParty.Domain.Identity;
 /// profile fields (Users module). Session tokens are modelled as separate
 /// aggregates that reference <see cref="Id"/>.
 /// </summary>
-public sealed class User : AggregateRoot
+public sealed partial class User : AggregateRoot
 {
     public const int MaxDisplayNameLength = 40;
+    public const int MinUsernameLength = 3;
+    public const int MaxUsernameLength = 32;
 
     private User()
     {
@@ -30,6 +33,14 @@ public sealed class User : AggregateRoot
     }
 
     public Email Email { get; private set; } = null!;
+
+    /// <summary>
+    /// Optional unique login handle (lowercase). Lets accounts — primarily the
+    /// admin — sign in with a username instead of an email. Null for accounts that
+    /// only authenticate by email (the default for self-registered users).
+    /// </summary>
+    public string? Username { get; private set; }
+
     public string PasswordHash { get; private set; } = null!;
     public string DisplayName { get; private set; } = null!;
     public string? AvatarUrl { get; private set; }
@@ -107,6 +118,48 @@ public sealed class User : AggregateRoot
         AvatarUrl = string.IsNullOrWhiteSpace(avatarUrl) ? null : avatarUrl.Trim();
         Touch();
     }
+
+    /// <summary>
+    /// Assigns (or clears) the login username. The value is normalised to lowercase;
+    /// uniqueness is enforced by the caller (repository / DB unique index).
+    /// </summary>
+    public Result SetUsername(string? username)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            Username = null;
+            Touch();
+            return Result.Success();
+        }
+
+        var normalized = NormalizeUsername(username);
+        if (normalized is null)
+        {
+            return DomainErrors.Identity.UsernameInvalid;
+        }
+
+        Username = normalized;
+        Touch();
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Normalises a username to its canonical form (trimmed, lowercase) and returns
+    /// null when it does not satisfy the format rules (3-32 chars, letters/digits/._-).
+    /// </summary>
+    public static string? NormalizeUsername(string? username)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return null;
+        }
+
+        var candidate = username.Trim().ToLowerInvariant();
+        return UsernamePattern().IsMatch(candidate) ? candidate : null;
+    }
+
+    [GeneratedRegex(@"^[a-z0-9._-]{3,32}$")]
+    private static partial Regex UsernamePattern();
 
     public void RecordLogin() => LastLoginAtUtc = DateTimeOffset.UtcNow;
 

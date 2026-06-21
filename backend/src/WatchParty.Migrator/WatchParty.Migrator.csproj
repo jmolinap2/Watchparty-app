@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\WatchParty.Application\WatchParty.Application.csproj" />
     <ProjectReference Include="..\WatchParty.Infrastructure\WatchParty.Infrastructure.csproj" />
+    <ProjectReference Include="..\WatchParty.Observability\WatchParty.Observability.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -14,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="appsettings.json">
+    <None Update="appsettings*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

@@ -11,7 +11,7 @@ namespace WatchParty.Api.Realtime;
 /// </summary>
 public sealed class PresenceSweeper(
     IPresenceMaintenance presenceMaintenance,
-    IRoomRealtimeNotifier notifier,
+    IServiceScopeFactory scopeFactory,
     ILogger<PresenceSweeper> logger) : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromSeconds(60);
@@ -39,6 +39,11 @@ public sealed class PresenceSweeper(
     private async Task SweepAsync(CancellationToken cancellationToken)
     {
         var roomIds = await presenceMaintenance.GetActiveRoomIdsAsync(cancellationToken);
+        if (roomIds.Count == 0) return;
+
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var notifier = scope.ServiceProvider.GetRequiredService<IRoomRealtimeNotifier>();
+
         foreach (var roomId in roomIds)
         {
             var result = await presenceMaintenance.SweepRoomAsync(roomId, cancellationToken);

@@ -10,6 +10,7 @@ export interface ApiErrorResponse {
   code: string;
   message: string;
   details?: Record<string, string[]>;
+  correlationId?: string;
 }
 
 export interface UserProfileDto {
@@ -127,7 +128,9 @@ export interface RegisterRequest {
   displayName: string;
 }
 export interface LoginRequest {
-  email: string;
+  email?: string;
+  identifier?: string;
+  username?: string;
   password: string;
 }
 export interface CreateRoomRequest {

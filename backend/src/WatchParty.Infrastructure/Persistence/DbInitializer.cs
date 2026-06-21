@@ -55,6 +55,8 @@ public static class DbInitializer
         var adminEmailRaw = configuration["Seed:AdminEmail"] ?? "admin@watchparty.local";
         var adminPassword = configuration["Seed:AdminPassword"] ?? "ChangeMe123!";
         var adminDisplayName = configuration["Seed:AdminDisplayName"] ?? "Administrator";
+        var adminUsername = configuration["Seed:AdminUsername"] ?? "admin";
+        var normalizedAdminUsername = User.NormalizeUsername(adminUsername);
 
         var emailResult = Email.Create(adminEmailRaw);
         if (emailResult.IsFailure)
@@ -64,9 +66,30 @@ public static class DbInitializer
         }
 
         var email = emailResult.Value;
-        if (await users.EmailExistsAsync(email.Value, cancellationToken))
+        var existing = await users.GetByEmailAsync(email.Value, cancellationToken);
+        if (existing is not null)
         {
+            await EnsureSeedAdminAsync(users, unitOfWork, existing, normalizedAdminUsername, logger, cancellationToken);
             return;
+        }
+
+        if (normalizedAdminUsername is not null)
+        {
+            var existingByUsername = await users.GetByUsernameAsync(normalizedAdminUsername, cancellationToken);
+            if (existingByUsername is not null)
+            {
+                logger.LogWarning(
+                    "Seed admin email '{SeedEmail}' was not found, but username '{Username}' already belongs to '{ExistingEmail}'. " +
+                    "Skipping new admin creation to avoid a username conflict. Existing password was not changed.",
+                    email.Value,
+                    normalizedAdminUsername,
+                    existingByUsername.Email.Value);
+                return;
+            }
+        }
+        else
+        {
+            logger.LogWarning("Seed admin username '{Username}' is invalid; admin will be seeded without username login.", adminUsername);
         }
 
         var userResult = User.Register(email, passwordHasher.Hash(adminPassword), adminDisplayName);
@@ -79,11 +102,71 @@ public static class DbInitializer
         var admin = userResult.Value;
         admin.SetRole(UserRole.Admin);
         admin.ConfirmEmail();
+        if (normalizedAdminUsername is not null)
+        {
+            admin.SetUsername(normalizedAdminUsername);
+        }
 
         await users.AddAsync(admin, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        logger.LogInformation("Seeded administrator account '{Email}'.", email.Value);
+        logger.LogInformation("Seeded administrator account '{Email}' (username '{Username}').", email.Value, admin.Username);
+    }
+
+    private static async Task EnsureSeedAdminAsync(
+        IUserRepository users,
+        IUnitOfWork unitOfWork,
+        User admin,
+        string? adminUsername,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var changed = false;
+
+        if (admin.Role != UserRole.Admin)
+        {
+            admin.SetRole(UserRole.Admin);
+            changed = true;
+        }
+
+        if (!admin.EmailConfirmed)
+        {
+            admin.ConfirmEmail();
+            changed = true;
+        }
+
+        if (string.IsNullOrEmpty(admin.Username) && !string.IsNullOrEmpty(adminUsername))
+        {
+            if (await users.UsernameExistsAsync(adminUsername, cancellationToken))
+            {
+                logger.LogWarning(
+                    "Seed administrator '{Email}' exists, but username '{Username}' is already used by another account. " +
+                    "Username login was not backfilled.",
+                    admin.Email.Value,
+                    adminUsername);
+            }
+            else
+            {
+                admin.SetUsername(adminUsername);
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            users.Update(admin);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            logger.LogInformation(
+                "Updated seed administrator '{Email}' (username '{Username}'). Existing password was not changed.",
+                admin.Email.Value,
+                admin.Username ?? "-");
+            return;
+        }
+
+        logger.LogInformation(
+            "Seed administrator '{Email}' already exists (username '{Username}'). Existing password was not changed.",
+            admin.Email.Value,
+            admin.Username ?? "-");
     }
 
     private static async Task SeedAllowedDomainsAsync(IServiceProvider provider, ILogger logger, CancellationToken cancellationToken)

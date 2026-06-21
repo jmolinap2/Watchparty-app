@@ -8,4 +8,5 @@ namespace WatchParty.Contracts.Common;
 public sealed record ApiErrorResponse(
     string Code,
     string Message,
-    IReadOnlyDictionary<string, string[]>? Details = null);
+    IReadOnlyDictionary<string, string[]>? Details = null,
+    string? CorrelationId = null);

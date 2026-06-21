@@ -1,0 +1,220 @@
+@page "/login"
+@inject AdminApiClient Api
+@inject AdminSession Session
+@inject NavigationManager Nav
+@inject IConfiguration Configuration
+@inject IHostEnvironment Environment
+@inject ILogger<Login> Logger
+
+<PageTitle>Ingresar — WatchParty Admin</PageTitle>
+
+<div class="login-shell">
+    <div class="login-panel">
+        <section class="login-context">
+            <p class="eyebrow">WatchParty Admin</p>
+            <h1>Ingresar</h1>
+            <dl class="diagnostic-grid">
+                <div>
+                    <dt>API</dt>
+                    <dd><code>@BackendApiUrl</code></dd>
+                </div>
+                <div>
+                    <dt>Entorno</dt>
+                    <dd>@Environment.EnvironmentName</dd>
+                </div>
+                <div>
+                    <dt>Log admin</dt>
+                    <dd><code>@AdminLogPath</code></dd>
+                </div>
+                <div>
+                    <dt>Log API</dt>
+                    <dd><code>@ApiLogPath</code></dd>
+                </div>
+                <div>
+                    <dt>Log migrator</dt>
+                    <dd><code>@MigratorLogPath</code></dd>
+                </div>
+            </dl>
+        </section>
+
+        <section class="login-form-panel">
+            <EditForm Model="model" OnValidSubmit="LoginAsync" FormName="login">
+                <DataAnnotationsValidator />
+                <div class="field">
+                    <label>Usuario o correo</label>
+                    <InputText @bind-Value="model.Identifier" placeholder="admin" autocomplete="username" />
+                    <ValidationMessage For="() => model.Identifier" />
+                </div>
+                <div class="field">
+                    <label>Contraseña</label>
+                    <InputText type="password" @bind-Value="model.Password" placeholder="••••••••" autocomplete="current-password" />
+                    <ValidationMessage For="() => model.Password" />
+                </div>
+                <button type="submit" class="primary" disabled="@loading">
+                    @(loading ? "Ingresando..." : "Ingresar")
+                </button>
+            </EditForm>
+
+            @if (failure is not null)
+            {
+                <div class="login-error" role="alert">
+                    <strong>@failure.Title</strong>
+                    <p>@failure.Message</p>
+                    <dl class="failure-details">
+                        <div>
+                            <dt>Intento</dt>
+                            <dd>@failure.OccurredAt</dd>
+                        </div>
+                        <div>
+                            <dt>Estado</dt>
+                            <dd>@failure.Status</dd>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(failure.Code))
+                        {
+                            <div>
+                                <dt>Código</dt>
+                                <dd><code>@failure.Code</code></dd>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(failure.CorrelationId))
+                        {
+                            <div>
+                                <dt>Correlación</dt>
+                                <dd><code>@failure.CorrelationId</code></dd>
+                            </div>
+                        }
+                    </dl>
+                </div>
+            }
+        </section>
+    </div>
+</div>
+
+@code {
+    private readonly LoginModel model = new();
+    private LoginFailure? failure;
+    private bool loading;
+    private string BackendApiUrl => Configuration["BackendApi:BaseUrl"] ?? "https://localhost:7001";
+    private string AdminLogPath => WatchPartyLogPaths.ResolveLogFilePath(Configuration, "watchparty-admin.log");
+    private string ApiLogPath => WatchPartyLogPaths.ResolveLogFilePath(Configuration, "watchparty-api.log", useConfiguredFileName: false);
+    private string MigratorLogPath => WatchPartyLogPaths.ResolveLogFilePath(Configuration, "watchparty-migrator.log", useConfiguredFileName: false);
+
+    protected override void OnInitialized()
+    {
+        if (Session.IsAuthenticated)
+            Nav.NavigateTo("/", replace: true);
+    }
+
+    private async Task LoginAsync()
+    {
+        loading = true;
+        failure = null;
+        try
+        {
+            var result = await Api.LoginAsync(model.Identifier, model.Password);
+            Session.SetToken(result.AccessToken, model.Identifier);
+            Nav.NavigateTo("/", replace: true);
+        }
+        catch (AdminApiException ex)
+        {
+            failure = BuildFailure(ex);
+            Logger.LogWarning(
+                ex,
+                "Admin login failed. Status={Status}; Code={Code}; CorrelationId={CorrelationId}; BackendApi={BackendApi}",
+                ex.StatusText,
+                ex.ApiCode ?? "-",
+                ex.CorrelationId ?? "-",
+                BackendApiUrl);
+        }
+        catch (Exception ex)
+        {
+            failure = new LoginFailure(
+                "No se pudo completar el inicio de sesión",
+                ex.Message,
+                "Error local",
+                null,
+                null,
+                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            Logger.LogError(ex, "Unexpected admin login failure.");
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private static LoginFailure BuildFailure(AdminApiException ex)
+    {
+        var occurredAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        var code = ex.ApiCode;
+
+        if (ex.StatusCode is HttpStatusCode.Unauthorized || code == "identity.invalid_credentials")
+        {
+            return new LoginFailure(
+                "Credenciales incorrectas",
+                "El API rechazó el usuario/correo o la contraseña. Si la base fue creada por el migrator antiguo, revisa el log del migrator porque pudo haber sembrado otra contraseña inicial.",
+                ex.StatusText,
+                code,
+                ex.CorrelationId,
+                occurredAt);
+        }
+
+        if (ex.StatusCode is HttpStatusCode.Forbidden && code == "identity.account_blocked")
+        {
+            return new LoginFailure(
+                "Cuenta bloqueada",
+                "La cuenta existe, pero está bloqueada en WatchParty.",
+                ex.StatusText,
+                code,
+                ex.CorrelationId,
+                occurredAt);
+        }
+
+        if (!ex.HasHttpResponse)
+        {
+            return new LoginFailure(
+                "No se pudo conectar con el API",
+                "El panel admin no recibió respuesta del backend. Verifica que WatchParty.Api esté levantado en la URL configurada.",
+                ex.StatusText,
+                code,
+                ex.CorrelationId,
+                occurredAt);
+        }
+
+        if ((int)ex.StatusCode!.Value >= 500)
+        {
+            return new LoginFailure(
+                "El API respondió con error interno",
+                "El backend sí respondió, pero falló procesando la solicitud. Busca la correlación en el log del API.",
+                ex.StatusText,
+                code,
+                ex.CorrelationId,
+                occurredAt);
+        }
+
+        return new LoginFailure(
+            "El API rechazó la solicitud",
+            ex.ApiMessage ?? ex.Message,
+            ex.StatusText,
+            code,
+            ex.CorrelationId,
+            occurredAt);
+    }
+
+    private sealed class LoginModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "El usuario o correo es obligatorio.")]
+        public string Identifier { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "La contraseña es obligatoria.")]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    private sealed record LoginFailure(
+        string Title,
+        string Message,
+        string Status,
+        string? Code,
+        string? CorrelationId,
+        string OccurredAt);
+}

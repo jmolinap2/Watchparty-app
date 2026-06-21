@@ -17,7 +17,7 @@ public sealed class AuthController(IDispatcher dispatcher) : ApiControllerBase(d
 
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest request, CancellationToken cancellationToken) =>
-        (await Dispatcher.Send(new LoginUserCommand(request.Email, request.Password, IpAddress), cancellationToken)).ToActionResult();
+        (await Dispatcher.Send(new LoginUserCommand(request.LoginIdentifier, request.Password, IpAddress), cancellationToken)).ToActionResult();
 
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh(RefreshTokenRequest request, CancellationToken cancellationToken) =>

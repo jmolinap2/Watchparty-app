@@ -1,6 +1,9 @@
 @page "/"
-@rendermode InteractiveServer
 @inject AdminApiClient Api
+@inject AdminSession Session
+@inject NavigationManager Nav
+@inject IConfiguration Configuration
+@inject ILogger<Home> Logger
 
 <PageTitle>WatchParty Admin</PageTitle>
 
@@ -10,11 +13,27 @@
             <h1>WatchParty Admin</h1>
             <p>Usuarios, salas, reportes, dominios, metricas y auditoria.</p>
         </div>
-        <div class="token-box">
-            <input type="password" placeholder="JWT admin" @bind="token" @bind:event="oninput" />
-            <button class="primary" @onclick="LoadAsync" disabled="@loading">Actualizar</button>
+        <div class="header-actions">
+            <span class="session-email">@Session.Email</span>
+            <button @onclick="LoadAsync" disabled="@loading">Actualizar</button>
+            <button class="danger" @onclick="Logout">Cerrar sesion</button>
         </div>
     </header>
+
+    <section class="diagnostic-strip">
+        <div>
+            <span>API</span>
+            <code>@BackendApiUrl</code>
+        </div>
+        <div>
+            <span>Log admin</span>
+            <code>@AdminLogPath</code>
+        </div>
+        <div>
+            <span>Log API</span>
+            <code>@ApiLogPath</code>
+        </div>
+    </section>
 
     @if (!string.IsNullOrWhiteSpace(message))
     {
@@ -212,41 +231,54 @@
 </section>
 
 @code {
-    private string token = string.Empty;
     private string newDomain = string.Empty;
-    private string message = "Pega un JWT con rol Admin para cargar el panel.";
+    private string message = string.Empty;
     private bool loading;
     private AdminSnapshot? snapshot;
+    private string BackendApiUrl => Configuration["BackendApi:BaseUrl"] ?? "https://localhost:7001";
+    private string AdminLogPath => WatchPartyLogPaths.ResolveLogFilePath(Configuration, "watchparty-admin.log");
+    private string ApiLogPath => WatchPartyLogPaths.ResolveLogFilePath(Configuration, "watchparty-api.log", useConfiguredFileName: false);
 
-    private async Task LoadAsync()
+    protected override async Task OnInitializedAsync()
     {
-        if (string.IsNullOrWhiteSpace(token))
+        if (!Session.IsAuthenticated)
         {
-            message = "Token requerido.";
+            Nav.NavigateTo("/login", replace: true);
             return;
         }
 
+        await LoadAsync();
+    }
+
+    private void Logout()
+    {
+        Session.Clear();
+        Nav.NavigateTo("/login", replace: true);
+    }
+
+    private async Task LoadAsync()
+    {
         await RunAsync(async () =>
         {
-            snapshot = await Api.LoadAsync(token);
+            snapshot = await Api.LoadAsync(Session.Token!);
             message = $"Actualizado {DateTime.Now:t}.";
         });
     }
 
     private Task BlockUserAsync(Guid userId) =>
-        RunAndReloadAsync(() => Api.BlockUserAsync(token, userId, "Bloqueado desde panel admin."));
+        RunAndReloadAsync(() => Api.BlockUserAsync(Session.Token!, userId, "Bloqueado desde panel admin."));
 
     private Task UnblockUserAsync(Guid userId) =>
-        RunAndReloadAsync(() => Api.UnblockUserAsync(token, userId));
+        RunAndReloadAsync(() => Api.UnblockUserAsync(Session.Token!, userId));
 
     private Task CloseRoomAsync(Guid roomId) =>
-        RunAndReloadAsync(() => Api.CloseRoomAsync(token, roomId));
+        RunAndReloadAsync(() => Api.CloseRoomAsync(Session.Token!, roomId));
 
     private Task ResolveReportAsync(Guid reportId) =>
-        RunAndReloadAsync(() => Api.ResolveReportAsync(token, reportId, "Resuelto desde panel admin."));
+        RunAndReloadAsync(() => Api.ResolveReportAsync(Session.Token!, reportId, "Resuelto desde panel admin."));
 
     private Task RejectReportAsync(Guid reportId) =>
-        RunAndReloadAsync(() => Api.RejectReportAsync(token, reportId, "Rechazado desde panel admin."));
+        RunAndReloadAsync(() => Api.RejectReportAsync(Session.Token!, reportId, "Rechazado desde panel admin."));
 
     private async Task AddDomainAsync()
     {
@@ -257,19 +289,19 @@
             return;
         }
 
-        await RunAndReloadAsync(() => Api.AddAllowedDomainAsync(token, host));
+        await RunAndReloadAsync(() => Api.AddAllowedDomainAsync(Session.Token!, host));
         newDomain = string.Empty;
     }
 
     private Task ToggleDomainAsync(Guid id, bool enabled) =>
-        RunAndReloadAsync(() => Api.ToggleDomainAsync(token, id, enabled));
+        RunAndReloadAsync(() => Api.ToggleDomainAsync(Session.Token!, id, enabled));
 
     private async Task RunAndReloadAsync(Func<Task> action)
     {
         await RunAsync(async () =>
         {
             await action();
-            snapshot = await Api.LoadAsync(token);
+            snapshot = await Api.LoadAsync(Session.Token!);
             message = $"Accion aplicada {DateTime.Now:t}.";
         });
     }
@@ -281,13 +313,49 @@
         {
             await action();
         }
+        catch (AdminApiException ex)
+        {
+            message = FormatApiFailure(ex);
+            Logger.LogWarning(
+                ex,
+                "Admin operation failed. Status={Status}; Code={Code}; CorrelationId={CorrelationId}; BackendApi={BackendApi}",
+                ex.StatusText,
+                ex.ApiCode ?? "-",
+                ex.CorrelationId ?? "-",
+                BackendApiUrl);
+        }
         catch (Exception ex)
         {
             message = ex.Message;
+            Logger.LogError(ex, "Unexpected admin operation failure.");
         }
         finally
         {
             loading = false;
         }
+    }
+
+    private static string FormatApiFailure(AdminApiException ex)
+    {
+        var suffix = string.IsNullOrWhiteSpace(ex.CorrelationId)
+            ? string.Empty
+            : $" Correlación: {ex.CorrelationId}.";
+
+        if (!ex.HasHttpResponse)
+        {
+            return $"No se pudo conectar con el API ({ex.BackendApi}).{suffix}";
+        }
+
+        if ((int)ex.StatusCode!.Value >= 500)
+        {
+            return $"El API respondió {ex.StatusText}. Revisa el log del API.{suffix}";
+        }
+
+        if (ex.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            return $"Sesión no autorizada ({ex.StatusText}). Vuelve a iniciar sesión.{suffix}";
+        }
+
+        return $"El API rechazó la operación ({ex.StatusText}, {ex.ApiCode ?? "sin código"}): {ex.ApiMessage ?? ex.Message}.{suffix}";
     }
 }

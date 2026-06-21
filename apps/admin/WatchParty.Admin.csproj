@@ -7,4 +7,8 @@
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\backend\src\WatchParty.Observability\WatchParty.Observability.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -33,6 +33,11 @@ public sealed class RequestAuditMiddleware(
         finally
         {
             stopwatch.Stop();
+            var statusCode = exception is null
+                ? httpContext.Response.StatusCode
+                : StatusCodes.Status500InternalServerError;
+
+            LogRequestOutcome(httpContext, auditContext, stopwatch.ElapsedMilliseconds, statusCode, exception);
 
             if (!ShouldSkip(httpContext))
             {
@@ -40,6 +45,7 @@ public sealed class RequestAuditMiddleware(
                     httpContext,
                     auditContext,
                     stopwatch.ElapsedMilliseconds,
+                    statusCode,
                     exception,
                     auditLogWriter);
             }
@@ -50,6 +56,7 @@ public sealed class RequestAuditMiddleware(
         HttpContext httpContext,
         AuditContext auditContext,
         long durationMs,
+        int statusCode,
         Exception? exception,
         IAuditLogWriter auditLogWriter)
     {
@@ -57,9 +64,6 @@ public sealed class RequestAuditMiddleware(
         {
             var endpoint = httpContext.GetEndpoint();
             var action = $"{auditContext.HttpMethod} {auditContext.RequestPath}";
-            var statusCode = exception is null
-                ? httpContext.Response.StatusCode
-                : StatusCodes.Status500InternalServerError;
 
             var auditLog = AuditLog.HttpRequest(
                 action,
@@ -81,6 +85,67 @@ public sealed class RequestAuditMiddleware(
         {
             logger.LogWarning(auditException, "Failed to persist request audit log.");
         }
+    }
+
+    private void LogRequestOutcome(
+        HttpContext httpContext,
+        AuditContext auditContext,
+        long durationMs,
+        int statusCode,
+        Exception? exception)
+    {
+        if (httpContext.Request.Path.StartsWithSegments("/health"))
+        {
+            return;
+        }
+
+        const string message =
+            "HTTP {Method} {Path} responded {StatusCode} in {DurationMs} ms. CorrelationId={CorrelationId}.";
+
+        if (exception is not null)
+        {
+            logger.LogError(
+                exception,
+                message,
+                auditContext.HttpMethod,
+                auditContext.RequestPath,
+                statusCode,
+                durationMs,
+                auditContext.CorrelationId);
+            return;
+        }
+
+        if (statusCode >= StatusCodes.Status500InternalServerError)
+        {
+            logger.LogError(
+                message,
+                auditContext.HttpMethod,
+                auditContext.RequestPath,
+                statusCode,
+                durationMs,
+                auditContext.CorrelationId);
+            return;
+        }
+
+        if (statusCode >= StatusCodes.Status400BadRequest)
+        {
+            logger.LogWarning(
+                message,
+                auditContext.HttpMethod,
+                auditContext.RequestPath,
+                statusCode,
+                durationMs,
+                auditContext.CorrelationId);
+            return;
+        }
+
+        logger.LogInformation(
+            message,
+            auditContext.HttpMethod,
+            auditContext.RequestPath,
+            statusCode,
+            durationMs,
+            auditContext.CorrelationId);
     }
 
     private static AuditContext BuildAuditContext(HttpContext httpContext)

@@ -14,6 +14,8 @@ public static class DomainErrors
         public static readonly Error PasswordTooWeak = Error.Validation("identity.password_too_weak", "Password does not meet the minimum requirements.");
         public static readonly Error DisplayNameRequired = Error.Validation("identity.display_name_required", "Display name is required.");
         public static readonly Error EmailAlreadyInUse = Error.Conflict("identity.email_in_use", "Email is already registered.");
+        public static readonly Error UsernameInvalid = Error.Validation("identity.username_invalid", "Username must be 3-32 characters using letters, digits, dot, underscore or hyphen.");
+        public static readonly Error UsernameAlreadyInUse = Error.Conflict("identity.username_in_use", "Username is already taken.");
         public static readonly Error InvalidCredentials = Error.Unauthorized("identity.invalid_credentials", "Email or password is incorrect.");
         public static readonly Error EmailNotConfirmed = Error.Forbidden("identity.email_not_confirmed", "Email address has not been confirmed.");
         public static readonly Error AccountBlocked = Error.Forbidden("identity.account_blocked", "This account has been blocked.");

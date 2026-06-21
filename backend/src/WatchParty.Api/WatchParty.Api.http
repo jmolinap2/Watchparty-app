@@ -1,6 +1,14 @@
 @WatchParty.Api_HostAddress = http://localhost:5210
 
-GET {{WatchParty.Api_HostAddress}}/weatherforecast/
+GET {{WatchParty.Api_HostAddress}}/health
 Accept: application/json
 
 ###
+
+POST {{WatchParty.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "admin",
+  "password": "123qwe"
+}

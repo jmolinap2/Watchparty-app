@@ -82,8 +82,9 @@ Variables usadas por `.env.example` y `docker-compose.yml`:
 | `POSTGRES_PASSWORD` | `watchparty` | Password PostgreSQL |
 | `POSTGRES_DB` | `watchparty` | Base PostgreSQL |
 | `JWT_KEY` | `CHANGE_ME_USE_A_32_BYTE_MINIMUM_SECRET` | Llave JWT, minimo 32 bytes |
-| `SEED_ADMIN_EMAIL` | `admin@watchparty.local` | Admin inicial |
-| `SEED_ADMIN_PASSWORD` | `ChangeMe123!` | Password admin inicial |
+| `SEED_ADMIN_EMAIL` | `admin@aspnetboilerplate.com` | Email del admin inicial |
+| `SEED_ADMIN_PASSWORD` | `123qwe` | Password admin inicial |
+| `SEED_ADMIN_USERNAME` | `admin` | Usuario corto del admin inicial |
 
 Para cualquier ambiente real, cambiar `JWT_KEY`, credenciales de PostgreSQL y password admin.
 
@@ -139,18 +140,17 @@ Config relevante:
 ```json
 {
   "BackendApi": {
-    "BaseUrl": "https://localhost:7001"
+    "BaseUrl": "https://localhost:44331"
   }
 }
 ```
 
-El panel actual pide pegar manualmente un JWT admin. Consume endpoints de metricas, usuarios, salas, reportes, dominios permitidos y auditoria.
+En `Development`, el panel apunta a la API por IIS Express (`https://localhost:44331`). El login admin acepta usuario o correo; con la semilla local por defecto se puede ingresar como `admin` o `admin@aspnetboilerplate.com` usando `123qwe`. Consume endpoints de metricas, usuarios, salas, reportes, dominios permitidos y auditoria.
 
 Pendiente para despliegue admin:
 
 - decidir si se publica detras de nginx
 - agregar Dockerfile/servicio Compose si se quiere contenerizar
-- reemplazar el ingreso manual de JWT por login/sesion admin
 - ajustar `BackendApi:BaseUrl` por ambiente
 
 ## Mobile Expo

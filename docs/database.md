@@ -4,6 +4,7 @@ Este documento resume el esquema observado en las migraciones EF Core actuales:
 
 - `backend/src/WatchParty.Infrastructure/Persistence/Migrations/20260618123947_InitialCreate.cs`
 - `backend/src/WatchParty.Infrastructure/Persistence/Migrations/20260618124007_InitialAuditFoundation.cs`
+- `backend/src/WatchParty.Infrastructure/Persistence/Migrations/20260621053547_AddUserUsername.cs`
 
 No describe tablas futuras. Si el modelo cambia, este documento debe actualizarse junto con la migracion.
 
@@ -30,6 +31,7 @@ El `DbInitializer` aplica migraciones en startup cuando `Database:AutoMigrate=tr
 |---|---|
 | `InitialCreate` | Crea tablas base de identidad, salas, miembros, media, chat, reportes y dominios permitidos. |
 | `InitialAuditFoundation` | Crea `audit_logs` e indices de auditoria. |
+| `AddUserUsername` | Agrega `users.Username` para login por usuario corto, con indice unico filtrado para valores no nulos. |
 
 Observacion importante: en la migracion inicial, muchas columnas de referencia son UUID pero no todas tienen foreign key fisica declarada. La FK explicita observada en `InitialCreate` es `room_members.RoomId -> rooms.Id`. Si se requiere integridad referencial fisica para otros campos, queda pendiente agregarla en una migracion futura.
 
@@ -43,6 +45,7 @@ Usuarios de la plataforma.
 |---|---|---|
 | `Id` | `uuid` | PK |
 | `Email` | `varchar(256)` | Unico |
+| `Username` | `varchar(32)`, nullable | Usuario corto unico para login cuando existe |
 | `PasswordHash` | `varchar(512)` | Hash de password |
 | `DisplayName` | `varchar(40)` | Nombre visible |
 | `AvatarUrl` | `varchar(2048)`, nullable | URL de avatar |
@@ -60,6 +63,7 @@ Usuarios de la plataforma.
 Indices:
 
 - `IX_users_Email` unico
+- `IX_users_Username` unico filtrado (`Username IS NOT NULL`)
 
 ### `refresh_tokens`
 
