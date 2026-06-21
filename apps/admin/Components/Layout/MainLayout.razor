@@ -1,4 +1,6 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@inject IHostEnvironment Environment
+@inject IStringLocalizer<SharedResource> L
 
 <div class="page">
     <div class="sidebar">
@@ -6,18 +8,25 @@
     </div>
 
     <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+        <div class="app-topbar">
+            <div>
+                <span class="topbar-kicker">WatchParty</span>
+                <strong>@L["Admin.PanelTitle"]</strong>
+            </div>
+            <div class="topbar-actions">
+                <LanguageSwitcher />
+                <span class="environment-pill">@Environment.EnvironmentName</span>
+            </div>
         </div>
 
-        <article class="content px-4">
+        <article class="content">
             @Body
         </article>
     </main>
 </div>
 
 <div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+    @L["Layout.UnhandledError"]
+    <a href="." class="reload">@L["Common.Reload"]</a>
+    <span class="dismiss">x</span>
 </div>

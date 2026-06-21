@@ -3,34 +3,35 @@
 @inject AdminSession Session
 @inject NavigationManager Nav
 @inject IConfiguration Configuration
+@inject IStringLocalizer<SharedResource> L
 @inject ILogger<Home> Logger
 
-<PageTitle>WatchParty Admin</PageTitle>
+<PageTitle>@Text("Admin.AppTitle")</PageTitle>
 
 <section class="admin-shell">
     <header class="admin-header">
         <div>
-            <h1>WatchParty Admin</h1>
-            <p>Usuarios, salas, reportes, dominios, metricas y auditoria.</p>
+            <h1>@Text("Admin.AppTitle")</h1>
+            <p>@Text("Home.Subtitle")</p>
         </div>
         <div class="header-actions">
             <span class="session-email">@Session.Email</span>
-            <button @onclick="LoadAsync" disabled="@loading">Actualizar</button>
-            <button class="danger" @onclick="Logout">Cerrar sesion</button>
+            <button @onclick="LoadAsync" disabled="@loading">@Text("Common.Refresh")</button>
+            <button class="danger" @onclick="Logout">@Text("Common.SignOut")</button>
         </div>
     </header>
 
     <section class="diagnostic-strip">
         <div>
-            <span>API</span>
+            <span>@Text("Diagnostic.Api")</span>
             <code>@BackendApiUrl</code>
         </div>
         <div>
-            <span>Log admin</span>
+            <span>@Text("Diagnostic.AdminLog")</span>
             <code>@AdminLogPath</code>
         </div>
         <div>
-            <span>Log API</span>
+            <span>@Text("Diagnostic.ApiLog")</span>
             <code>@ApiLogPath</code>
         </div>
     </section>
@@ -40,31 +41,39 @@
         <div class="notice">@message</div>
     }
 
-    @if (snapshot is not null)
+    @if (restoringSession)
+    {
+        <div class="loading-panel">
+            <span class="loading-spinner" aria-hidden="true"></span>
+            <span>@Text("Home.RestoringSession")</span>
+        </div>
+    }
+
+    @if (!restoringSession && snapshot is not null)
     {
         <section class="metric-grid">
-            <MetricCard Label="Usuarios" Value="@snapshot.Metrics.RegisteredUsers" />
-            <MetricCard Label="Activos" Value="@snapshot.Metrics.ActiveUsers" />
-            <MetricCard Label="Salas" Value="@snapshot.Metrics.RoomsCreated" />
-            <MetricCard Label="Salas activas" Value="@snapshot.Metrics.ActiveRooms" />
-            <MetricCard Label="Mensajes" Value="@snapshot.Metrics.MessagesSent" />
-            <MetricCard Label="Reportes abiertos" Value="@snapshot.Metrics.OpenReports" />
-            <MetricCard Label="Errores video" Value="@snapshot.Metrics.PlaybackErrors" />
-            <MetricCard Label="Reconexiones" Value="@snapshot.Metrics.SignalrReconnections" />
+            <MetricCard Label="@Text("Metrics.Users")" Value="@snapshot.Metrics.RegisteredUsers" />
+            <MetricCard Label="@Text("Metrics.ActiveUsers")" Value="@snapshot.Metrics.ActiveUsers" />
+            <MetricCard Label="@Text("Metrics.Rooms")" Value="@snapshot.Metrics.RoomsCreated" />
+            <MetricCard Label="@Text("Metrics.ActiveRooms")" Value="@snapshot.Metrics.ActiveRooms" />
+            <MetricCard Label="@Text("Metrics.Messages")" Value="@snapshot.Metrics.MessagesSent" />
+            <MetricCard Label="@Text("Metrics.OpenReports")" Value="@snapshot.Metrics.OpenReports" />
+            <MetricCard Label="@Text("Metrics.PlaybackErrors")" Value="@snapshot.Metrics.PlaybackErrors" />
+            <MetricCard Label="@Text("Metrics.Reconnections")" Value="@snapshot.Metrics.SignalrReconnections" />
         </section>
 
         <section class="panel">
             <div class="panel-title">
-                <h2>Usuarios</h2>
-                <span>@snapshot.Users.TotalCount total</span>
+                <h2>@Text("Sections.Users")</h2>
+                <span>@Text("Common.Total", snapshot.Users.TotalCount)</span>
             </div>
             <table>
                 <thead>
                 <tr>
-                    <th>Email</th>
-                    <th>Nombre</th>
-                    <th>Rol</th>
-                    <th>Estado</th>
+                    <th>@Text("Table.Email")</th>
+                    <th>@Text("Table.Name")</th>
+                    <th>@Text("Table.Role")</th>
+                    <th>@Text("Table.Status")</th>
                     <th></th>
                 </tr>
                 </thead>
@@ -72,18 +81,22 @@
                 @foreach (var user in snapshot.Users.Items)
                 {
                     <tr>
-                        <td>@user.Email</td>
+                        <td class="strong-cell">@user.Email</td>
                         <td>@user.DisplayName</td>
-                        <td>@user.Role</td>
-                        <td>@(user.IsBlocked ? "Bloqueado" : "Activo")</td>
+                        <td><span class="badge neutral">@TranslateValue("Enum.Role", user.Role)</span></td>
+                        <td>
+                            <span class="badge @(user.IsBlocked ? "danger" : "success")">
+                                @(user.IsBlocked ? Text("Status.Blocked") : Text("Status.Active"))
+                            </span>
+                        </td>
                         <td class="actions">
                             @if (user.IsBlocked)
                             {
-                                <button @onclick="() => UnblockUserAsync(user.Id)">Desbloquear</button>
+                                <button @onclick="() => UnblockUserAsync(user.Id)">@Text("Actions.Unblock")</button>
                             }
                             else
                             {
-                                <button @onclick="() => BlockUserAsync(user.Id)">Bloquear</button>
+                                <button @onclick="() => BlockUserAsync(user.Id)">@Text("Actions.Block")</button>
                             }
                         </td>
                     </tr>
@@ -94,17 +107,17 @@
 
         <section class="panel">
             <div class="panel-title">
-                <h2>Salas</h2>
-                <span>@snapshot.Rooms.TotalCount total</span>
+                <h2>@Text("Sections.Rooms")</h2>
+                <span>@Text("Common.Total", snapshot.Rooms.TotalCount)</span>
             </div>
             <table>
                 <thead>
                 <tr>
-                    <th>Codigo</th>
-                    <th>Nombre</th>
-                    <th>Estado</th>
-                    <th>Miembros</th>
-                    <th>Online</th>
+                    <th>@Text("Table.Code")</th>
+                    <th>@Text("Table.Name")</th>
+                    <th>@Text("Table.Status")</th>
+                    <th>@Text("Table.Members")</th>
+                    <th>@Text("Table.Online")</th>
                     <th></th>
                 </tr>
                 </thead>
@@ -112,15 +125,15 @@
                 @foreach (var room in snapshot.Rooms.Items)
                 {
                     <tr>
-                        <td>@room.Code</td>
+                        <td class="strong-cell">@room.Code</td>
                         <td>@room.Name</td>
-                        <td>@room.Status</td>
+                        <td><span class="badge neutral">@TranslateValue("Enum.RoomStatus", room.Status)</span></td>
                         <td>@room.MemberCount</td>
                         <td>@room.OnlineCount</td>
                         <td class="actions">
                             @if (!string.Equals(room.Status, "Closed", StringComparison.OrdinalIgnoreCase))
                             {
-                                <button @onclick="() => CloseRoomAsync(room.Id)">Cerrar</button>
+                                <button @onclick="() => CloseRoomAsync(room.Id)">@Text("Actions.Close")</button>
                             }
                         </td>
                     </tr>
@@ -131,16 +144,16 @@
 
         <section class="panel">
             <div class="panel-title">
-                <h2>Reportes</h2>
-                <span>@snapshot.Reports.TotalCount total</span>
+                <h2>@Text("Sections.Reports")</h2>
+                <span>@Text("Common.Total", snapshot.Reports.TotalCount)</span>
             </div>
             <table>
                 <thead>
                 <tr>
-                    <th>Tipo</th>
-                    <th>Motivo</th>
-                    <th>Estado</th>
-                    <th>Creado</th>
+                    <th>@Text("Table.Type")</th>
+                    <th>@Text("Table.Reason")</th>
+                    <th>@Text("Table.Status")</th>
+                    <th>@Text("Table.Created")</th>
                     <th></th>
                 </tr>
                 </thead>
@@ -148,15 +161,15 @@
                 @foreach (var report in snapshot.Reports.Items)
                 {
                     <tr>
-                        <td>@report.Type</td>
+                        <td><span class="badge neutral">@TranslateValue("Enum.ReportType", report.Type)</span></td>
                         <td>@report.Reason</td>
-                        <td>@report.Status</td>
+                        <td><span class="badge @(string.Equals(report.Status, "Open", StringComparison.OrdinalIgnoreCase) ? "warning" : "success")">@TranslateValue("Enum.ReportStatus", report.Status)</span></td>
                         <td>@report.CreatedAtUtc.ToLocalTime().ToString("g")</td>
                         <td class="actions">
                             @if (string.Equals(report.Status, "Open", StringComparison.OrdinalIgnoreCase))
                             {
-                                <button @onclick="() => ResolveReportAsync(report.Id)">Resolver</button>
-                                <button @onclick="() => RejectReportAsync(report.Id)">Rechazar</button>
+                                <button @onclick="() => ResolveReportAsync(report.Id)">@Text("Actions.Resolve")</button>
+                                <button @onclick="() => RejectReportAsync(report.Id)">@Text("Actions.Reject")</button>
                             }
                         </td>
                     </tr>
@@ -167,17 +180,17 @@
 
         <section class="panel">
             <div class="panel-title">
-                <h2>Dominios permitidos</h2>
+                <h2>@Text("Sections.AllowedDomains")</h2>
                 <div class="inline-form">
                     <input placeholder="cdn.example.com" @bind="newDomain" @bind:event="oninput" />
-                    <button @onclick="AddDomainAsync">Agregar</button>
+                    <button @onclick="AddDomainAsync">@Text("Actions.Add")</button>
                 </div>
             </div>
             <table>
                 <thead>
                 <tr>
-                    <th>Host</th>
-                    <th>Estado</th>
+                    <th>@Text("Table.Host")</th>
+                    <th>@Text("Table.Status")</th>
                     <th></th>
                 </tr>
                 </thead>
@@ -185,11 +198,15 @@
                 @foreach (var domain in snapshot.Domains)
                 {
                     <tr>
-                        <td>@domain.Host</td>
-                        <td>@(domain.IsEnabled ? "Permitido" : "Deshabilitado")</td>
+                        <td class="strong-cell">@domain.Host</td>
+                        <td>
+                            <span class="badge @(domain.IsEnabled ? "success" : "neutral")">
+                                @(domain.IsEnabled ? Text("Status.Allowed") : Text("Status.Disabled"))
+                            </span>
+                        </td>
                         <td class="actions">
                             <button @onclick="() => ToggleDomainAsync(domain.Id, !domain.IsEnabled)">
-                                @(domain.IsEnabled ? "Deshabilitar" : "Habilitar")
+                                @(domain.IsEnabled ? Text("Actions.Disable") : Text("Actions.Enable"))
                             </button>
                         </td>
                     </tr>
@@ -200,27 +217,27 @@
 
         <section class="panel">
             <div class="panel-title">
-                <h2>Auditoria</h2>
-                <span>@snapshot.AuditLogs.TotalCount total</span>
+                <h2>@Text("Sections.Audit")</h2>
+                <span>@Text("Common.Total", snapshot.AuditLogs.TotalCount)</span>
             </div>
             <table>
                 <thead>
                 <tr>
-                    <th>Categoria</th>
-                    <th>Accion</th>
-                    <th>Recurso</th>
-                    <th>Estado</th>
-                    <th>Fecha</th>
+                    <th>@Text("Table.Category")</th>
+                    <th>@Text("Table.Action")</th>
+                    <th>@Text("Table.Resource")</th>
+                    <th>@Text("Table.Status")</th>
+                    <th>@Text("Table.Date")</th>
                 </tr>
                 </thead>
                 <tbody>
                 @foreach (var log in snapshot.AuditLogs.Items)
                 {
                     <tr>
-                        <td>@log.Category</td>
+                        <td><span class="badge neutral">@log.Category</span></td>
                         <td>@log.Action</td>
                         <td>@(log.Resource ?? log.TargetType ?? "-")</td>
-                        <td>@(log.StatusCode?.ToString() ?? "-")</td>
+                        <td><span class="badge @(log.StatusCode is >= 400 ? "danger" : "success")">@(log.StatusCode?.ToString() ?? "-")</span></td>
                         <td>@log.CreatedAtUtc.ToLocalTime().ToString("g")</td>
                     </tr>
                 }
@@ -234,25 +251,34 @@
     private string newDomain = string.Empty;
     private string message = string.Empty;
     private bool loading;
+    private bool restoringSession = true;
     private AdminSnapshot? snapshot;
     private string BackendApiUrl => Configuration["BackendApi:BaseUrl"] ?? "https://localhost:7001";
     private string AdminLogPath => WatchPartyLogPaths.ResolveLogFilePath(Configuration, "watchparty-admin.log");
     private string ApiLogPath => WatchPartyLogPaths.ResolveLogFilePath(Configuration, "watchparty-api.log", useConfiguredFileName: false);
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await Session.RestoreAsync();
         if (!Session.IsAuthenticated)
         {
             Nav.NavigateTo("/login", replace: true);
             return;
         }
 
+        restoringSession = false;
         await LoadAsync();
+        StateHasChanged();
     }
 
-    private void Logout()
+    private async Task Logout()
     {
-        Session.Clear();
+        await Session.ClearAsync();
         Nav.NavigateTo("/login", replace: true);
     }
 
@@ -261,12 +287,12 @@
         await RunAsync(async () =>
         {
             snapshot = await Api.LoadAsync(Session.Token!);
-            message = $"Actualizado {DateTime.Now:t}.";
+            message = Text("Home.Updated", DateTime.Now.ToString("t"));
         });
     }
 
     private Task BlockUserAsync(Guid userId) =>
-        RunAndReloadAsync(() => Api.BlockUserAsync(Session.Token!, userId, "Bloqueado desde panel admin."));
+        RunAndReloadAsync(() => Api.BlockUserAsync(Session.Token!, userId, Text("Action.BlockReason")));
 
     private Task UnblockUserAsync(Guid userId) =>
         RunAndReloadAsync(() => Api.UnblockUserAsync(Session.Token!, userId));
@@ -275,17 +301,17 @@
         RunAndReloadAsync(() => Api.CloseRoomAsync(Session.Token!, roomId));
 
     private Task ResolveReportAsync(Guid reportId) =>
-        RunAndReloadAsync(() => Api.ResolveReportAsync(Session.Token!, reportId, "Resuelto desde panel admin."));
+        RunAndReloadAsync(() => Api.ResolveReportAsync(Session.Token!, reportId, Text("Action.ResolveNote")));
 
     private Task RejectReportAsync(Guid reportId) =>
-        RunAndReloadAsync(() => Api.RejectReportAsync(Session.Token!, reportId, "Rechazado desde panel admin."));
+        RunAndReloadAsync(() => Api.RejectReportAsync(Session.Token!, reportId, Text("Action.RejectNote")));
 
     private async Task AddDomainAsync()
     {
         var host = newDomain.Trim();
         if (host.Length == 0)
         {
-            message = "Host requerido.";
+            message = Text("Validation.HostRequired");
             return;
         }
 
@@ -302,7 +328,7 @@
         {
             await action();
             snapshot = await Api.LoadAsync(Session.Token!);
-            message = $"Accion aplicada {DateTime.Now:t}.";
+            message = Text("Home.ActionApplied", DateTime.Now.ToString("t"));
         });
     }
 
@@ -335,27 +361,37 @@
         }
     }
 
-    private static string FormatApiFailure(AdminApiException ex)
+    private string FormatApiFailure(AdminApiException ex)
     {
         var suffix = string.IsNullOrWhiteSpace(ex.CorrelationId)
             ? string.Empty
-            : $" Correlación: {ex.CorrelationId}.";
+            : Text("Errors.CorrelationSuffix", ex.CorrelationId);
 
         if (!ex.HasHttpResponse)
         {
-            return $"No se pudo conectar con el API ({ex.BackendApi}).{suffix}";
+            return Text("Errors.ApiUnavailable", ex.BackendApi ?? new Uri("about:blank"), suffix);
         }
 
         if ((int)ex.StatusCode!.Value >= 500)
         {
-            return $"El API respondió {ex.StatusText}. Revisa el log del API.{suffix}";
+            return Text("Errors.ApiServer", ex.StatusText, suffix);
         }
 
         if (ex.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
         {
-            return $"Sesión no autorizada ({ex.StatusText}). Vuelve a iniciar sesión.{suffix}";
+            return Text("Errors.Unauthorized", ex.StatusText, suffix);
         }
 
-        return $"El API rechazó la operación ({ex.StatusText}, {ex.ApiCode ?? "sin código"}): {ex.ApiMessage ?? ex.Message}.{suffix}";
+        return Text("Errors.ApiRejected", ex.StatusText, ex.ApiCode ?? Text("Common.NoCode"), ex.ApiMessage ?? ex.Message, suffix);
     }
+
+    private string TranslateValue(string prefix, string value)
+    {
+        var key = $"{prefix}.{value}";
+        var localized = L[key];
+        return localized.ResourceNotFound ? value : localized.Value;
+    }
+
+    private string Text(string key) => L[key].Value;
+    private string Text(string key, params object[] arguments) => L[key, arguments].Value;
 }

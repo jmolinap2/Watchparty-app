@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Action.BlockReason" xml:space="preserve"><value>Blocked from the admin panel.</value></data>
+  <data name="Action.RejectNote" xml:space="preserve"><value>Rejected from the admin panel.</value></data>
+  <data name="Action.ResolveNote" xml:space="preserve"><value>Resolved from the admin panel.</value></data>
+  <data name="Actions.Add" xml:space="preserve"><value>Add</value></data>
+  <data name="Actions.Block" xml:space="preserve"><value>Block</value></data>
+  <data name="Actions.Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Actions.Disable" xml:space="preserve"><value>Disable</value></data>
+  <data name="Actions.Enable" xml:space="preserve"><value>Enable</value></data>
+  <data name="Actions.Reject" xml:space="preserve"><value>Reject</value></data>
+  <data name="Actions.Resolve" xml:space="preserve"><value>Resolve</value></data>
+  <data name="Actions.Unblock" xml:space="preserve"><value>Unblock</value></data>
+  <data name="Admin.AppTitle" xml:space="preserve"><value>WatchParty Admin</value></data>
+  <data name="Admin.PanelTitle" xml:space="preserve"><value>Admin panel</value></data>
+  <data name="Admin.Studio" xml:space="preserve"><value>Admin Studio</value></data>
+  <data name="Auth.Identifier" xml:space="preserve"><value>Username or email</value></data>
+  <data name="Auth.Password" xml:space="preserve"><value>Password</value></data>
+  <data name="Auth.SignIn" xml:space="preserve"><value>Sign in</value></data>
+  <data name="Auth.SigningIn" xml:space="preserve"><value>Signing in...</value></data>
+  <data name="Common.Code" xml:space="preserve"><value>Code</value></data>
+  <data name="Common.Correlation" xml:space="preserve"><value>Correlation</value></data>
+  <data name="Common.Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Common.NoCode" xml:space="preserve"><value>no code</value></data>
+  <data name="Common.Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Common.Reload" xml:space="preserve"><value>Reload</value></data>
+  <data name="Common.SignOut" xml:space="preserve"><value>Sign out</value></data>
+  <data name="Common.Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Common.Total" xml:space="preserve"><value>{0} total</value></data>
+  <data name="Diagnostic.AdminLog" xml:space="preserve"><value>Admin log</value></data>
+  <data name="Diagnostic.Api" xml:space="preserve"><value>API</value></data>
+  <data name="Diagnostic.ApiLog" xml:space="preserve"><value>API log</value></data>
+  <data name="Diagnostic.Environment" xml:space="preserve"><value>Environment</value></data>
+  <data name="Diagnostic.MigratorLog" xml:space="preserve"><value>Migrator log</value></data>
+  <data name="Enum.ReportStatus.Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Enum.ReportStatus.Rejected" xml:space="preserve"><value>Rejected</value></data>
+  <data name="Enum.ReportStatus.Resolved" xml:space="preserve"><value>Resolved</value></data>
+  <data name="Enum.ReportType.Message" xml:space="preserve"><value>Message</value></data>
+  <data name="Enum.ReportType.User" xml:space="preserve"><value>User</value></data>
+  <data name="Enum.Role.Admin" xml:space="preserve"><value>Admin</value></data>
+  <data name="Enum.Role.Member" xml:space="preserve"><value>Member</value></data>
+  <data name="Enum.RoomStatus.Active" xml:space="preserve"><value>Active</value></data>
+  <data name="Enum.RoomStatus.Closed" xml:space="preserve"><value>Closed</value></data>
+  <data name="Errors.ApiRejected" xml:space="preserve"><value>The API rejected the operation ({0}, {1}): {2}.{3}</value></data>
+  <data name="Errors.ApiServer" xml:space="preserve"><value>The API returned {0}. Check the API log.{1}</value></data>
+  <data name="Errors.ApiUnavailable" xml:space="preserve"><value>Could not connect to the API ({0}).{1}</value></data>
+  <data name="Errors.CorrelationSuffix" xml:space="preserve"><value> Correlation: {0}.</value></data>
+  <data name="Errors.Unauthorized" xml:space="preserve"><value>Unauthorized session ({0}). Sign in again.{1}</value></data>
+  <data name="Home.ActionApplied" xml:space="preserve"><value>Action applied {0}.</value></data>
+  <data name="Home.RestoringSession" xml:space="preserve"><value>Restoring session...</value></data>
+  <data name="Home.Subtitle" xml:space="preserve"><value>Users, rooms, reports, domains, metrics, and audit.</value></data>
+  <data name="Home.Updated" xml:space="preserve"><value>Updated {0}.</value></data>
+  <data name="Language.En" xml:space="preserve"><value>English</value></data>
+  <data name="Language.Es" xml:space="preserve"><value>Spanish</value></data>
+  <data name="Layout.UnhandledError" xml:space="preserve"><value>An unexpected error occurred.</value></data>
+  <data name="Login.AccountBlockedMessage" xml:space="preserve"><value>The account exists, but it is blocked in WatchParty.</value></data>
+  <data name="Login.AccountBlockedTitle" xml:space="preserve"><value>Account blocked</value></data>
+  <data name="Login.ApiInternalMessage" xml:space="preserve"><value>The backend responded, but failed while processing the request. Find the correlation in the API log.</value></data>
+  <data name="Login.ApiInternalTitle" xml:space="preserve"><value>The API returned an internal error</value></data>
+  <data name="Login.ApiRejectedTitle" xml:space="preserve"><value>The API rejected the request</value></data>
+  <data name="Login.Attempt" xml:space="preserve"><value>Attempt</value></data>
+  <data name="Login.InvalidCredentialsMessage" xml:space="preserve"><value>The API rejected the username/email or password. If the database was created by the old migrator, check the migrator log because it may have seeded another initial password.</value></data>
+  <data name="Login.InvalidCredentialsTitle" xml:space="preserve"><value>Incorrect credentials</value></data>
+  <data name="Login.LocalError" xml:space="preserve"><value>Local error</value></data>
+  <data name="Login.NoApiMessage" xml:space="preserve"><value>The admin panel did not receive a backend response. Verify that WatchParty.Api is running at the configured URL.</value></data>
+  <data name="Login.NoApiTitle" xml:space="preserve"><value>Could not connect to the API</value></data>
+  <data name="Login.PageTitle" xml:space="preserve"><value>Sign in - WatchParty Admin</value></data>
+  <data name="Login.UnexpectedTitle" xml:space="preserve"><value>Could not complete sign in</value></data>
+  <data name="Metrics.ActiveRooms" xml:space="preserve"><value>Active rooms</value></data>
+  <data name="Metrics.ActiveUsers" xml:space="preserve"><value>Active users</value></data>
+  <data name="Metrics.Messages" xml:space="preserve"><value>Messages</value></data>
+  <data name="Metrics.OpenReports" xml:space="preserve"><value>Open reports</value></data>
+  <data name="Metrics.PlaybackErrors" xml:space="preserve"><value>Video errors</value></data>
+  <data name="Metrics.Reconnections" xml:space="preserve"><value>Reconnections</value></data>
+  <data name="Metrics.Rooms" xml:space="preserve"><value>Rooms</value></data>
+  <data name="Metrics.Users" xml:space="preserve"><value>Users</value></data>
+  <data name="Nav.Operation" xml:space="preserve"><value>Operation</value></data>
+  <data name="Nav.Panel" xml:space="preserve"><value>Panel</value></data>
+  <data name="Sections.AllowedDomains" xml:space="preserve"><value>Allowed domains</value></data>
+  <data name="Sections.Audit" xml:space="preserve"><value>Audit</value></data>
+  <data name="Sections.Reports" xml:space="preserve"><value>Reports</value></data>
+  <data name="Sections.Rooms" xml:space="preserve"><value>Rooms</value></data>
+  <data name="Sections.Users" xml:space="preserve"><value>Users</value></data>
+  <data name="Status.Active" xml:space="preserve"><value>Active</value></data>
+  <data name="Status.Allowed" xml:space="preserve"><value>Allowed</value></data>
+  <data name="Status.Blocked" xml:space="preserve"><value>Blocked</value></data>
+  <data name="Status.Disabled" xml:space="preserve"><value>Disabled</value></data>
+  <data name="Table.Action" xml:space="preserve"><value>Action</value></data>
+  <data name="Table.Category" xml:space="preserve"><value>Category</value></data>
+  <data name="Table.Code" xml:space="preserve"><value>Code</value></data>
+  <data name="Table.Created" xml:space="preserve"><value>Created</value></data>
+  <data name="Table.Date" xml:space="preserve"><value>Date</value></data>
+  <data name="Table.Email" xml:space="preserve"><value>Email</value></data>
+  <data name="Table.Host" xml:space="preserve"><value>Host</value></data>
+  <data name="Table.Members" xml:space="preserve"><value>Members</value></data>
+  <data name="Table.Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Table.Online" xml:space="preserve"><value>Online</value></data>
+  <data name="Table.Reason" xml:space="preserve"><value>Reason</value></data>
+  <data name="Table.Resource" xml:space="preserve"><value>Resource</value></data>
+  <data name="Table.Role" xml:space="preserve"><value>Role</value></data>
+  <data name="Table.Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Table.Type" xml:space="preserve"><value>Type</value></data>
+  <data name="Validation.HostRequired" xml:space="preserve"><value>Host is required.</value></data>
+  <data name="Validation.IdentifierRequired" xml:space="preserve"><value>Username or email is required.</value></data>
+  <data name="Validation.PasswordRequired" xml:space="preserve"><value>Password is required.</value></data>
+</root>

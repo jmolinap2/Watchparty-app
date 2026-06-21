@@ -4,54 +4,60 @@
 @inject NavigationManager Nav
 @inject IConfiguration Configuration
 @inject IHostEnvironment Environment
+@inject IStringLocalizer<SharedResource> L
 @inject ILogger<Login> Logger
 
-<PageTitle>Ingresar — WatchParty Admin</PageTitle>
+<PageTitle>@L["Login.PageTitle"]</PageTitle>
 
 <div class="login-shell">
     <div class="login-panel">
         <section class="login-context">
             <p class="eyebrow">WatchParty Admin</p>
-            <h1>Ingresar</h1>
+            <h1>@L["Auth.SignIn"]</h1>
             <dl class="diagnostic-grid">
                 <div>
-                    <dt>API</dt>
+                    <dt>@L["Diagnostic.Api"]</dt>
                     <dd><code>@BackendApiUrl</code></dd>
                 </div>
                 <div>
-                    <dt>Entorno</dt>
+                    <dt>@L["Diagnostic.Environment"]</dt>
                     <dd>@Environment.EnvironmentName</dd>
                 </div>
                 <div>
-                    <dt>Log admin</dt>
+                    <dt>@L["Diagnostic.AdminLog"]</dt>
                     <dd><code>@AdminLogPath</code></dd>
                 </div>
                 <div>
-                    <dt>Log API</dt>
+                    <dt>@L["Diagnostic.ApiLog"]</dt>
                     <dd><code>@ApiLogPath</code></dd>
                 </div>
                 <div>
-                    <dt>Log migrator</dt>
+                    <dt>@L["Diagnostic.MigratorLog"]</dt>
                     <dd><code>@MigratorLogPath</code></dd>
                 </div>
             </dl>
         </section>
 
         <section class="login-form-panel">
-            <EditForm Model="model" OnValidSubmit="LoginAsync" FormName="login">
-                <DataAnnotationsValidator />
+            <EditForm Model="model" OnSubmit="LoginAsync" FormName="login">
                 <div class="field">
-                    <label>Usuario o correo</label>
+                    <label>@L["Auth.Identifier"]</label>
                     <InputText @bind-Value="model.Identifier" placeholder="admin" autocomplete="username" />
-                    <ValidationMessage For="() => model.Identifier" />
+                    @if (!string.IsNullOrWhiteSpace(identifierError))
+                    {
+                        <div class="validation-message">@identifierError</div>
+                    }
                 </div>
                 <div class="field">
-                    <label>Contraseña</label>
-                    <InputText type="password" @bind-Value="model.Password" placeholder="••••••••" autocomplete="current-password" />
-                    <ValidationMessage For="() => model.Password" />
+                    <label>@L["Auth.Password"]</label>
+                    <InputText type="password" @bind-Value="model.Password" placeholder="********" autocomplete="current-password" />
+                    @if (!string.IsNullOrWhiteSpace(passwordError))
+                    {
+                        <div class="validation-message">@passwordError</div>
+                    }
                 </div>
                 <button type="submit" class="primary" disabled="@loading">
-                    @(loading ? "Ingresando..." : "Ingresar")
+                    @(loading ? L["Auth.SigningIn"] : L["Auth.SignIn"])
                 </button>
             </EditForm>
 
@@ -62,24 +68,24 @@
                     <p>@failure.Message</p>
                     <dl class="failure-details">
                         <div>
-                            <dt>Intento</dt>
+                            <dt>@L["Login.Attempt"]</dt>
                             <dd>@failure.OccurredAt</dd>
                         </div>
                         <div>
-                            <dt>Estado</dt>
+                            <dt>@L["Common.Status"]</dt>
                             <dd>@failure.Status</dd>
                         </div>
                         @if (!string.IsNullOrWhiteSpace(failure.Code))
                         {
                             <div>
-                                <dt>Código</dt>
+                                <dt>@L["Common.Code"]</dt>
                                 <dd><code>@failure.Code</code></dd>
                             </div>
                         }
                         @if (!string.IsNullOrWhiteSpace(failure.CorrelationId))
                         {
                             <div>
-                                <dt>Correlación</dt>
+                                <dt>@L["Common.Correlation"]</dt>
                                 <dd><code>@failure.CorrelationId</code></dd>
                             </div>
                         }
@@ -93,26 +99,45 @@
 @code {
     private readonly LoginModel model = new();
     private LoginFailure? failure;
+    private string? identifierError;
+    private string? passwordError;
     private bool loading;
     private string BackendApiUrl => Configuration["BackendApi:BaseUrl"] ?? "https://localhost:7001";
     private string AdminLogPath => WatchPartyLogPaths.ResolveLogFilePath(Configuration, "watchparty-admin.log");
     private string ApiLogPath => WatchPartyLogPaths.ResolveLogFilePath(Configuration, "watchparty-api.log", useConfiguredFileName: false);
     private string MigratorLogPath => WatchPartyLogPaths.ResolveLogFilePath(Configuration, "watchparty-migrator.log", useConfiguredFileName: false);
 
-    protected override void OnInitialized()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await Session.RestoreAsync();
         if (Session.IsAuthenticated)
+        {
             Nav.NavigateTo("/", replace: true);
+        }
     }
 
     private async Task LoginAsync()
     {
         loading = true;
         failure = null;
+        identifierError = string.IsNullOrWhiteSpace(model.Identifier) ? L["Validation.IdentifierRequired"].Value : null;
+        passwordError = string.IsNullOrWhiteSpace(model.Password) ? L["Validation.PasswordRequired"].Value : null;
+
+        if (identifierError is not null || passwordError is not null)
+        {
+            loading = false;
+            return;
+        }
+
         try
         {
             var result = await Api.LoginAsync(model.Identifier, model.Password);
-            Session.SetToken(result.AccessToken, model.Identifier);
+            await Session.SetTokenAsync(result, model.Identifier);
             Nav.NavigateTo("/", replace: true);
         }
         catch (AdminApiException ex)
@@ -129,9 +154,9 @@
         catch (Exception ex)
         {
             failure = new LoginFailure(
-                "No se pudo completar el inicio de sesión",
+                L["Login.UnexpectedTitle"],
                 ex.Message,
-                "Error local",
+                L["Login.LocalError"],
                 null,
                 null,
                 DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
@@ -143,7 +168,7 @@
         }
     }
 
-    private static LoginFailure BuildFailure(AdminApiException ex)
+    private LoginFailure BuildFailure(AdminApiException ex)
     {
         var occurredAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         var code = ex.ApiCode;
@@ -151,8 +176,8 @@
         if (ex.StatusCode is HttpStatusCode.Unauthorized || code == "identity.invalid_credentials")
         {
             return new LoginFailure(
-                "Credenciales incorrectas",
-                "El API rechazó el usuario/correo o la contraseña. Si la base fue creada por el migrator antiguo, revisa el log del migrator porque pudo haber sembrado otra contraseña inicial.",
+                L["Login.InvalidCredentialsTitle"],
+                L["Login.InvalidCredentialsMessage"],
                 ex.StatusText,
                 code,
                 ex.CorrelationId,
@@ -162,8 +187,8 @@
         if (ex.StatusCode is HttpStatusCode.Forbidden && code == "identity.account_blocked")
         {
             return new LoginFailure(
-                "Cuenta bloqueada",
-                "La cuenta existe, pero está bloqueada en WatchParty.",
+                L["Login.AccountBlockedTitle"],
+                L["Login.AccountBlockedMessage"],
                 ex.StatusText,
                 code,
                 ex.CorrelationId,
@@ -173,8 +198,8 @@
         if (!ex.HasHttpResponse)
         {
             return new LoginFailure(
-                "No se pudo conectar con el API",
-                "El panel admin no recibió respuesta del backend. Verifica que WatchParty.Api esté levantado en la URL configurada.",
+                L["Login.NoApiTitle"],
+                L["Login.NoApiMessage"],
                 ex.StatusText,
                 code,
                 ex.CorrelationId,
@@ -184,8 +209,8 @@
         if ((int)ex.StatusCode!.Value >= 500)
         {
             return new LoginFailure(
-                "El API respondió con error interno",
-                "El backend sí respondió, pero falló procesando la solicitud. Busca la correlación en el log del API.",
+                L["Login.ApiInternalTitle"],
+                L["Login.ApiInternalMessage"],
                 ex.StatusText,
                 code,
                 ex.CorrelationId,
@@ -193,7 +218,7 @@
         }
 
         return new LoginFailure(
-            "El API rechazó la solicitud",
+            L["Login.ApiRejectedTitle"],
             ex.ApiMessage ?? ex.Message,
             ex.StatusText,
             code,
@@ -203,10 +228,7 @@
 
     private sealed class LoginModel
     {
-        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "El usuario o correo es obligatorio.")]
         public string Identifier { get; set; } = string.Empty;
-
-        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "La contraseña es obligatoria.")]
         public string Password { get; set; } = string.Empty;
     }
 

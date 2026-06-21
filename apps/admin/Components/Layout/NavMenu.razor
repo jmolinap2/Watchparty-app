@@ -1,6 +1,10 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">WatchParty.Admin</a>
+@inject IStringLocalizer<SharedResource> L
+
+<div class="brand-panel">
+    <div class="brand-mark">W</div>
+    <div>
+        <a class="navbar-brand" href="">WatchParty</a>
+        <span>@L["Admin.Studio"]</span>
     </div>
 </div>
 
@@ -8,11 +12,11 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav flex-column">
+        <p class="nav-section">@L["Nav.Operation"]</p>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Panel
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> @L["Nav.Panel"]
             </NavLink>
         </div>
     </nav>
 </div>
-

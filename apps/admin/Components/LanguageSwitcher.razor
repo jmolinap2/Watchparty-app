@@ -1,0 +1,25 @@
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> L
+
+<select class="language-select" aria-label="@L["Common.Language"]" value="@CurrentCulture" @onchange="ChangeCulture">
+    <option value="es">@L["Language.Es"]</option>
+    <option value="en">@L["Language.En"]</option>
+</select>
+
+@code {
+    private static readonly HashSet<string> SupportedCultures = ["es", "en"];
+    private string CurrentCulture => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+
+    private void ChangeCulture(ChangeEventArgs args)
+    {
+        var culture = args.Value?.ToString() ?? "es";
+        if (!SupportedCultures.Contains(culture))
+        {
+            culture = "es";
+        }
+
+        var relative = Nav.ToBaseRelativePath(Nav.Uri);
+        var redirectUri = "/" + relative;
+        Nav.NavigateTo($"/culture/set?culture={Uri.EscapeDataString(culture)}&redirectUri={Uri.EscapeDataString(redirectUri)}", forceLoad: true);
+    }
+}

@@ -1,3 +1,5 @@
+using System.Globalization;
+using Microsoft.AspNetCore.Localization;
 using WatchParty.Admin.Components;
 using WatchParty.Admin.Services;
 using WatchParty.Observability.Logging;
@@ -7,6 +9,9 @@ builder.Logging.AddWatchPartyFileLogger(builder.Configuration, "WatchParty.Admin
 
 try
 {
+    var supportedCultures = new[] { new CultureInfo("es"), new CultureInfo("en") };
+
+    builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
     builder.Services.AddScoped<AdminSession>();
 
     builder.Services.AddRazorComponents()
@@ -43,12 +48,40 @@ try
         app.UseExceptionHandler("/Error", createScopeForErrors: true);
         app.UseHsts();
     }
+
+    app.UseRequestLocalization(new RequestLocalizationOptions
+    {
+        DefaultRequestCulture = new RequestCulture("es"),
+        SupportedCultures = supportedCultures,
+        SupportedUICultures = supportedCultures
+    });
+
     app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
     app.UseHttpsRedirection();
 
     app.UseAntiforgery();
 
     app.MapGet("/health", () => Results.Ok());
+    app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext context) =>
+    {
+        if (!supportedCultures.Any(item => string.Equals(item.Name, culture, StringComparison.OrdinalIgnoreCase)))
+        {
+            culture = "es";
+        }
+
+        context.Response.Cookies.Append(
+            CookieRequestCultureProvider.DefaultCookieName,
+            CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+            new CookieOptions
+            {
+                Expires = DateTimeOffset.UtcNow.AddYears(1),
+                IsEssential = true,
+                SameSite = SameSiteMode.Lax,
+                Secure = context.Request.IsHttps
+            });
+
+        return Results.LocalRedirect(string.IsNullOrWhiteSpace(redirectUri) ? "/" : redirectUri);
+    });
     app.MapStaticAssets();
     app.MapRazorComponents<App>()
         .AddInteractiveServerRenderMode();
