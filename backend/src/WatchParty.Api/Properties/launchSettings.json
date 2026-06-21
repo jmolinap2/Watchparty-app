@@ -27,6 +27,16 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
+    },
+    "IIS Express + Tunnel": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "devTunnelEnabled": true,
+      "devTunnelAccess": "public"
     }
   },
   "$schema": "https://json.schemastore.org/launchsettings.json",

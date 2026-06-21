@@ -1,0 +1,123 @@
+@page "/audit"
+@inherits AdminPageBase
+
+<PageTitle>@Text("Sections.Audit") - @Text("Admin.AppTitle")</PageTitle>
+
+<section class="admin-shell">
+    <header class="admin-header">
+        <div>
+            <h1>@Text("Sections.Audit")</h1>
+            <p>@Text("Audit.Subtitle")</p>
+        </div>
+    </header>
+
+    @if (Message is not null)
+    {
+        <div class="notice @(MessageIsError ? "notice-error" : null)">@Message</div>
+    }
+
+    <DataTable TItem="AuditLogDto" Title="@Text("Sections.Audit")" ColumnCount="6"
+               Subtitle="@(result is null ? null : Text("Common.Total", result.TotalCount))"
+               Loading="@(result is null)" Items="result?.Items" EmptyText="@Text("Common.Empty")">
+        <Toolbar>
+            <EditForm Model="this" OnValidSubmit="ApplySearch" class="search-box">
+                <input @bind="search" placeholder="@Text("Audit.SearchPlaceholder")" aria-label="@Text("Common.Search")" />
+                <label class="check-inline">
+                    <input type="checkbox" @bind="onlyErrors" @bind:after="ApplySearch" />
+                    @Text("Audit.OnlyErrors")
+                </label>
+                <button type="submit" class="ghost">@Text("Common.Search")</button>
+            </EditForm>
+        </Toolbar>
+        <HeaderTemplate>
+            <th>@Text("Table.Category")</th>
+            <th>@Text("Table.Action")</th>
+            <th>@Text("Table.Resource")</th>
+            <th>@Text("Table.Status")</th>
+            <th>@Text("Table.Date")</th>
+            <th class="col-actions"></th>
+        </HeaderTemplate>
+        <RowTemplate Context="log">
+            <td><span class="badge neutral">@log.Category</span></td>
+            <td>@log.Action</td>
+            <td>@(log.Resource ?? log.TargetType ?? "—")</td>
+            <td><span class="badge @(log.StatusCode is >= 400 ? "danger" : "success")">@(log.StatusCode?.ToString() ?? "—")</span></td>
+            <td>@log.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+            <td class="actions">
+                <button class="ghost" @onclick="() => detail = log">@Text("Actions.Detail")</button>
+            </td>
+        </RowTemplate>
+        <Footer>
+            @if (result is not null)
+            {
+                <Pagination Page="result.Page" PageSize="result.PageSize" TotalCount="result.TotalCount"
+                            Info="@Text("Common.Total", result.TotalCount)" OnPageChanged="GoToPageAsync" />
+            }
+        </Footer>
+    </DataTable>
+</section>
+
+<ModalDialog Open="detail is not null" Title="@Text("Audit.DetailTitle")"
+             ConfirmText="@Text("Common.Close")" CancelText="@Text("Common.Close")"
+             CanConfirm="false" OnConfirm="() => detail = null" OnCancel="() => detail = null">
+    @if (detail is not null)
+    {
+        <dl class="detail-grid">
+            <div><dt>@Text("Table.Category")</dt><dd>@detail.Category</dd></div>
+            <div><dt>@Text("Table.Action")</dt><dd>@detail.Action</dd></div>
+            <div><dt>@Text("Table.Resource")</dt><dd>@(detail.Resource ?? "—")</dd></div>
+            <div><dt>@Text("Audit.HttpMethod")</dt><dd>@(detail.HttpMethod ?? "—") @(detail.StatusCode?.ToString() ?? string.Empty)</dd></div>
+            <div class="detail-wide"><dt>@Text("Audit.RequestPath")</dt><dd><code>@(detail.RequestPath ?? "—")</code></dd></div>
+            <div><dt>@Text("Audit.Duration")</dt><dd>@(detail.DurationMs?.ToString() ?? "—") ms</dd></div>
+            <div><dt>@Text("Audit.Actor")</dt><dd><code>@(detail.ActorUserId?.ToString() ?? "—")</code></dd></div>
+            <div><dt>@Text("Audit.Ip")</dt><dd>@(detail.IpAddress ?? "—")</dd></div>
+            <div><dt>@Text("Table.Date")</dt><dd>@detail.CreatedAtUtc.ToLocalTime().ToString("g")</dd></div>
+            @if (!string.IsNullOrWhiteSpace(detail.CorrelationId))
+            {
+                <div class="detail-wide"><dt>@Text("Common.Correlation")</dt><dd><code>@detail.CorrelationId</code></dd></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(detail.Details))
+            {
+                <div class="detail-wide"><dt>@Text("Audit.Details")</dt><dd><code>@detail.Details</code></dd></div>
+            }
+            @if (detail.HasException && !string.IsNullOrWhiteSpace(detail.Exception))
+            {
+                <div class="detail-wide"><dt>@Text("Audit.Exception")</dt><dd><code class="exception">@detail.Exception</code></dd></div>
+            }
+        </dl>
+    }
+</ModalDialog>
+
+@code {
+    private const int PageSize = 25;
+
+    private PagedResult<AuditLogDto>? result;
+    private string search = string.Empty;
+    private bool onlyErrors;
+    private int page = 1;
+
+    private AuditLogDto? detail;
+
+    protected override Task LoadInitialAsync() => RunAsync(ReloadAsync);
+
+    private async Task ReloadAsync() =>
+        result = await Api.GetAuditLogsAsync(new AuditLogSearchRequest
+        {
+            Search = string.IsNullOrWhiteSpace(search) ? null : search,
+            HasException = onlyErrors ? true : null,
+            Page = page,
+            PageSize = PageSize
+        });
+
+    private Task ApplySearch()
+    {
+        page = 1;
+        return RunAsync(ReloadAsync);
+    }
+
+    private Task GoToPageAsync(int newPage)
+    {
+        page = newPage;
+        return RunAsync(ReloadAsync);
+    }
+}

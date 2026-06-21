@@ -1,0 +1,166 @@
+@page "/reports"
+@inherits AdminPageBase
+
+<PageTitle>@Text("Sections.Reports") - @Text("Admin.AppTitle")</PageTitle>
+
+<section class="admin-shell">
+    <header class="admin-header">
+        <div>
+            <h1>@Text("Sections.Reports")</h1>
+            <p>@Text("Reports.Subtitle")</p>
+        </div>
+    </header>
+
+    @if (Message is not null)
+    {
+        <div class="notice @(MessageIsError ? "notice-error" : null)">@Message</div>
+    }
+
+    <DataTable TItem="ReportDto" Title="@Text("Sections.Reports")" ColumnCount="5"
+               Subtitle="@(result is null ? null : Text("Common.Total", result.TotalCount))"
+               Loading="@(result is null)" Items="result?.Items" EmptyText="@Text("Common.Empty")">
+        <Toolbar>
+            <select class="filter-select" @bind="status" @bind:after="ApplyFilter" aria-label="@Text("Table.Status")">
+                <option value="">@Text("Common.All")</option>
+                <option value="Open">@TranslateValue("Enum.ReportStatus", "Open")</option>
+                <option value="Resolved">@TranslateValue("Enum.ReportStatus", "Resolved")</option>
+                <option value="Rejected">@TranslateValue("Enum.ReportStatus", "Rejected")</option>
+            </select>
+        </Toolbar>
+        <HeaderTemplate>
+            <th>@Text("Table.Type")</th>
+            <th>@Text("Table.Reason")</th>
+            <th>@Text("Table.Status")</th>
+            <th>@Text("Table.Created")</th>
+            <th class="col-actions"></th>
+        </HeaderTemplate>
+        <RowTemplate Context="report">
+            <td><span class="badge neutral">@TranslateValue("Enum.ReportType", report.Type)</span></td>
+            <td>@report.Reason</td>
+            <td><span class="badge @StatusClass(report)">@TranslateValue("Enum.ReportStatus", report.Status)</span></td>
+            <td>@report.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+            <td class="actions">
+                <button class="ghost" @onclick="() => detail = report">@Text("Actions.Detail")</button>
+                @if (IsOpen(report))
+                {
+                    <button @onclick="() => OpenResolution(report, resolve: true)">@Text("Actions.Resolve")</button>
+                    <button class="danger" @onclick="() => OpenResolution(report, resolve: false)">@Text("Actions.Reject")</button>
+                }
+            </td>
+        </RowTemplate>
+        <Footer>
+            @if (result is not null)
+            {
+                <Pagination Page="result.Page" PageSize="result.PageSize" TotalCount="result.TotalCount"
+                            Info="@Text("Common.Total", result.TotalCount)" OnPageChanged="GoToPageAsync" />
+            }
+        </Footer>
+    </DataTable>
+</section>
+
+<ModalDialog Open="resolutionTarget is not null"
+             Title="@(resolveMode ? Text("Reports.ResolveTitle") : Text("Reports.RejectTitle"))"
+             ConfirmText="@(resolveMode ? Text("Actions.Resolve") : Text("Actions.Reject"))"
+             CancelText="@Text("Common.Cancel")" Danger="@(!resolveMode)" Busy="Loading"
+             CanConfirm="@(!string.IsNullOrWhiteSpace(note))"
+             OnConfirm="ConfirmResolutionAsync" OnCancel="() => resolutionTarget = null">
+    <label class="field-label">@Text("Reports.NoteLabel")</label>
+    <textarea @bind="note" rows="3" placeholder="@Text("Reports.NotePlaceholder")"></textarea>
+</ModalDialog>
+
+<ModalDialog Open="detail is not null" Title="@Text("Reports.DetailTitle")"
+             ConfirmText="@Text("Common.Close")" CancelText="@Text("Common.Close")"
+             CanConfirm="false" OnConfirm="() => detail = null" OnCancel="() => detail = null">
+    @if (detail is not null)
+    {
+        <dl class="detail-grid">
+            <div><dt>@Text("Table.Type")</dt><dd>@TranslateValue("Enum.ReportType", detail.Type)</dd></div>
+            <div><dt>@Text("Table.Status")</dt><dd>@TranslateValue("Enum.ReportStatus", detail.Status)</dd></div>
+            <div class="detail-wide"><dt>@Text("Table.Reason")</dt><dd>@detail.Reason</dd></div>
+            <div><dt>@Text("Reports.Reporter")</dt><dd><code>@detail.ReporterUserId</code></dd></div>
+            @if (detail.TargetUserId is not null)
+            {
+                <div><dt>@Text("Reports.TargetUser")</dt><dd><code>@detail.TargetUserId</code></dd></div>
+            }
+            @if (detail.RoomId is not null)
+            {
+                <div><dt>@Text("Sections.Rooms")</dt><dd><code>@detail.RoomId</code></dd></div>
+            }
+            <div><dt>@Text("Table.Created")</dt><dd>@detail.CreatedAtUtc.ToLocalTime().ToString("g")</dd></div>
+            @if (detail.ResolvedAtUtc is not null)
+            {
+                <div><dt>@Text("Reports.ResolvedAt")</dt><dd>@detail.ResolvedAtUtc.Value.ToLocalTime().ToString("g")</dd></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(detail.ResolutionNote))
+            {
+                <div class="detail-wide"><dt>@Text("Reports.NoteLabel")</dt><dd>@detail.ResolutionNote</dd></div>
+            }
+        </dl>
+    }
+</ModalDialog>
+
+@code {
+    private const int PageSize = 20;
+
+    private PagedResult<ReportDto>? result;
+    private string status = "Open";
+    private int page = 1;
+
+    private ReportDto? resolutionTarget;
+    private bool resolveMode = true;
+    private string note = string.Empty;
+    private ReportDto? detail;
+
+    private static bool IsOpen(ReportDto report) => string.Equals(report.Status, "Open", StringComparison.OrdinalIgnoreCase);
+
+    private static string StatusClass(ReportDto report) => report.Status switch
+    {
+        var s when string.Equals(s, "Open", StringComparison.OrdinalIgnoreCase) => "warning",
+        var s when string.Equals(s, "Resolved", StringComparison.OrdinalIgnoreCase) => "success",
+        _ => "neutral"
+    };
+
+    protected override Task LoadInitialAsync() => RunAsync(ReloadAsync);
+
+    private async Task ReloadAsync() =>
+        result = await Api.GetReportsAsync(string.IsNullOrWhiteSpace(status) ? null : status, page, PageSize);
+
+    private Task ApplyFilter()
+    {
+        page = 1;
+        return RunAsync(ReloadAsync);
+    }
+
+    private Task GoToPageAsync(int newPage)
+    {
+        page = newPage;
+        return RunAsync(ReloadAsync);
+    }
+
+    private void OpenResolution(ReportDto report, bool resolve)
+    {
+        resolutionTarget = report;
+        resolveMode = resolve;
+        note = string.Empty;
+    }
+
+    private async Task ConfirmResolutionAsync()
+    {
+        var target = resolutionTarget!;
+        var resolve = resolveMode;
+        resolutionTarget = null;
+        await RunAsync(async () =>
+        {
+            if (resolve)
+            {
+                await Api.ResolveReportAsync(target.Id, note.Trim());
+            }
+            else
+            {
+                await Api.RejectReportAsync(target.Id, note.Trim());
+            }
+
+            await ReloadAsync();
+        }, "Home.ActionApplied");
+    }
+}

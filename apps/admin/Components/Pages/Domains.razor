@@ -1,0 +1,79 @@
+@page "/domains"
+@inherits AdminPageBase
+
+<PageTitle>@Text("Sections.AllowedDomains") - @Text("Admin.AppTitle")</PageTitle>
+
+<section class="admin-shell">
+    <header class="admin-header">
+        <div>
+            <h1>@Text("Sections.AllowedDomains")</h1>
+            <p>@Text("Domains.Subtitle")</p>
+        </div>
+    </header>
+
+    @if (Message is not null)
+    {
+        <div class="notice @(MessageIsError ? "notice-error" : null)">@Message</div>
+    }
+
+    <DataTable TItem="AllowedDomainDto" Title="@Text("Sections.AllowedDomains")" ColumnCount="3"
+               Subtitle="@(domains is null ? null : Text("Common.Total", domains.Count))"
+               Loading="@(domains is null)" Items="domains" EmptyText="@Text("Common.Empty")">
+        <Toolbar>
+            <EditForm Model="this" OnValidSubmit="AddAsync" class="search-box">
+                <input @bind="newDomain" placeholder="cdn.example.com" aria-label="@Text("Table.Host")" />
+                <button type="submit" class="primary" disabled="@Loading">@Text("Actions.Add")</button>
+            </EditForm>
+        </Toolbar>
+        <HeaderTemplate>
+            <th>@Text("Table.Host")</th>
+            <th>@Text("Table.Status")</th>
+            <th class="col-actions"></th>
+        </HeaderTemplate>
+        <RowTemplate Context="domain">
+            <td class="strong-cell">@domain.Host</td>
+            <td>
+                <span class="badge @(domain.IsEnabled ? "success" : "neutral")">
+                    @(domain.IsEnabled ? Text("Status.Allowed") : Text("Status.Disabled"))
+                </span>
+            </td>
+            <td class="actions">
+                <button class="@(domain.IsEnabled ? "danger" : null)" @onclick="() => ToggleAsync(domain)">
+                    @(domain.IsEnabled ? Text("Actions.Disable") : Text("Actions.Enable"))
+                </button>
+            </td>
+        </RowTemplate>
+    </DataTable>
+</section>
+
+@code {
+    private IReadOnlyList<AllowedDomainDto>? domains;
+    private string newDomain = string.Empty;
+
+    protected override Task LoadInitialAsync() => RunAsync(ReloadAsync);
+
+    private async Task ReloadAsync() => domains = await Api.GetDomainsAsync();
+
+    private async Task AddAsync()
+    {
+        var host = newDomain.Trim();
+        if (host.Length == 0)
+        {
+            return;
+        }
+
+        await RunAsync(async () =>
+        {
+            await Api.AddAllowedDomainAsync(host);
+            newDomain = string.Empty;
+            await ReloadAsync();
+        }, "Home.ActionApplied");
+    }
+
+    private Task ToggleAsync(AllowedDomainDto domain) =>
+        RunAsync(async () =>
+        {
+            await Api.ToggleDomainAsync(domain.Id, !domain.IsEnabled);
+            await ReloadAsync();
+        }, "Home.ActionApplied");
+}

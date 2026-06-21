@@ -1,0 +1,37 @@
+@inject AdminSession Session
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> L
+
+<AuthorizeView>
+    <Authorized>
+        <div class="user-menu">
+            <span class="user-meta">
+                <span class="user-name">@(Session.DisplayName ?? Session.Email)</span>
+                <span class="badge neutral">@RoleLabel</span>
+            </span>
+            <button type="button" class="danger" @onclick="LogoutAsync">@L["Common.SignOut"]</button>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private string RoleLabel
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(Session.Role))
+            {
+                return string.Empty;
+            }
+
+            var localized = L[$"Enum.Role.{Session.Role}"];
+            return localized.ResourceNotFound ? Session.Role : localized.Value;
+        }
+    }
+
+    private async Task LogoutAsync()
+    {
+        await Session.ClearAsync();
+        Nav.NavigateTo("login", replace: true);
+    }
+}

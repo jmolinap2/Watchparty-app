@@ -1,0 +1,133 @@
+@page "/rooms"
+@inherits AdminPageBase
+
+<PageTitle>@Text("Sections.Rooms") - @Text("Admin.AppTitle")</PageTitle>
+
+<section class="admin-shell">
+    <header class="admin-header">
+        <div>
+            <h1>@Text("Sections.Rooms")</h1>
+            <p>@Text("Rooms.Subtitle")</p>
+        </div>
+    </header>
+
+    @if (Message is not null)
+    {
+        <div class="notice @(MessageIsError ? "notice-error" : null)">@Message</div>
+    }
+
+    <DataTable TItem="AdminRoomDto" Title="@Text("Sections.Rooms")" ColumnCount="6"
+               Subtitle="@(result is null ? null : Text("Common.Total", result.TotalCount))"
+               Loading="@(result is null)" Items="result?.Items" EmptyText="@Text("Common.Empty")">
+        <Toolbar>
+            <select class="filter-select" @bind="status" @bind:after="ApplyFilter" aria-label="@Text("Table.Status")">
+                <option value="">@Text("Common.All")</option>
+                <option value="Active">@TranslateValue("Enum.RoomStatus", "Active")</option>
+                <option value="Closed">@TranslateValue("Enum.RoomStatus", "Closed")</option>
+            </select>
+        </Toolbar>
+        <HeaderTemplate>
+            <th>@Text("Table.Code")</th>
+            <th>@Text("Table.Name")</th>
+            <th>@Text("Table.Status")</th>
+            <th>@Text("Table.Members")</th>
+            <th>@Text("Table.Online")</th>
+            <th class="col-actions"></th>
+        </HeaderTemplate>
+        <RowTemplate Context="room">
+            <td class="strong-cell">@room.Code</td>
+            <td>@room.Name</td>
+            <td><span class="badge @(IsClosed(room) ? "neutral" : "success")">@TranslateValue("Enum.RoomStatus", room.Status)</span></td>
+            <td>@room.MemberCount</td>
+            <td>@room.OnlineCount</td>
+            <td class="actions">
+                <button class="ghost" @onclick="() => OpenDetailAsync(room)">@Text("Actions.Detail")</button>
+                @if (!IsClosed(room))
+                {
+                    <button class="danger" @onclick="() => OpenClose(room)">@Text("Actions.Close")</button>
+                }
+            </td>
+        </RowTemplate>
+        <Footer>
+            @if (result is not null)
+            {
+                <Pagination Page="result.Page" PageSize="result.PageSize" TotalCount="result.TotalCount"
+                            Info="@Text("Common.Total", result.TotalCount)" OnPageChanged="GoToPageAsync" />
+            }
+        </Footer>
+    </DataTable>
+</section>
+
+<ModalDialog Open="closeTarget is not null" Title="@Text("Rooms.CloseTitle")"
+             Description="@(closeTarget is null ? null : $"{closeTarget.Name} ({closeTarget.Code})")"
+             ConfirmText="@Text("Actions.Close")" CancelText="@Text("Common.Cancel")"
+             Danger="true" Busy="Loading" OnConfirm="ConfirmCloseAsync" OnCancel="() => closeTarget = null">
+    <p>@Text("Rooms.CloseConfirm")</p>
+</ModalDialog>
+
+<ModalDialog Open="detail is not null" Title="@Text("Rooms.DetailTitle")"
+             ConfirmText="@Text("Common.Close")" CancelText="@Text("Common.Close")"
+             CanConfirm="false" OnConfirm="() => detail = null" OnCancel="() => detail = null">
+    @if (detail is not null)
+    {
+        <dl class="detail-grid">
+            <div><dt>@Text("Table.Name")</dt><dd>@detail.Name</dd></div>
+            <div><dt>@Text("Table.Code")</dt><dd>@detail.Code</dd></div>
+            <div><dt>@Text("Table.Status")</dt><dd>@TranslateValue("Enum.RoomStatus", detail.Status)</dd></div>
+            <div><dt>@Text("Table.Members")</dt><dd>@detail.MemberCount</dd></div>
+            <div><dt>@Text("Table.Online")</dt><dd>@detail.OnlineCount</dd></div>
+            <div><dt>@Text("Table.Created")</dt><dd>@detail.CreatedAtUtc.ToLocalTime().ToString("g")</dd></div>
+            @if (detail.ClosedAtUtc is not null)
+            {
+                <div><dt>@Text("Rooms.ClosedAt")</dt><dd>@detail.ClosedAtUtc.Value.ToLocalTime().ToString("g")</dd></div>
+            }
+            <div class="detail-wide"><dt>@Text("Rooms.HostId")</dt><dd><code>@detail.HostUserId</code></dd></div>
+        </dl>
+    }
+</ModalDialog>
+
+@code {
+    private const int PageSize = 20;
+
+    private PagedResult<AdminRoomDto>? result;
+    private string status = string.Empty;
+    private int page = 1;
+
+    private AdminRoomDto? closeTarget;
+    private AdminRoomDto? detail;
+
+    private static bool IsClosed(AdminRoomDto room) => string.Equals(room.Status, "Closed", StringComparison.OrdinalIgnoreCase);
+
+    protected override Task LoadInitialAsync() => RunAsync(ReloadAsync);
+
+    private async Task ReloadAsync() =>
+        result = await Api.GetRoomsAsync(string.IsNullOrWhiteSpace(status) ? null : status, page, PageSize);
+
+    private Task ApplyFilter()
+    {
+        page = 1;
+        return RunAsync(ReloadAsync);
+    }
+
+    private Task GoToPageAsync(int newPage)
+    {
+        page = newPage;
+        return RunAsync(ReloadAsync);
+    }
+
+    private void OpenClose(AdminRoomDto room) => closeTarget = room;
+
+    private async Task ConfirmCloseAsync()
+    {
+        var target = closeTarget!;
+        closeTarget = null;
+        await RunAsync(async () =>
+        {
+            await Api.CloseRoomAsync(target.Id);
+            await ReloadAsync();
+        }, "Home.ActionApplied");
+    }
+
+    private Task OpenDetailAsync(AdminRoomDto room) =>
+        RunAsync(async () => detail = await Api.GetRoomDetailAsync(room.Id));
+}

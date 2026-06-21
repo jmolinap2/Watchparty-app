@@ -2,10 +2,10 @@
 @inject IHostEnvironment Environment
 @inject IStringLocalizer<SharedResource> L
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<div class="page @(sidebarExpanded ? "sidebar-expanded" : "sidebar-collapsed")">
+    <aside class="sidebar" aria-label="@L["Nav.Navigation"]">
+        <NavMenu @bind-IsExpanded="sidebarExpanded" />
+    </aside>
 
     <main>
         <div class="app-topbar">
@@ -16,6 +16,7 @@
             <div class="topbar-actions">
                 <LanguageSwitcher />
                 <span class="environment-pill">@Environment.EnvironmentName</span>
+                <UserMenu />
             </div>
         </div>
 
@@ -30,3 +31,7 @@
     <a href="." class="reload">@L["Common.Reload"]</a>
     <span class="dismiss">x</span>
 </div>
+
+@code {
+    private bool sidebarExpanded = true;
+}

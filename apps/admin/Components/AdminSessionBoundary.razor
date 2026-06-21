@@ -1,0 +1,33 @@
+@inject AdminSession Session
+
+@if (ready)
+{
+    @ChildContent
+}
+else
+{
+    <div class="app-splash" role="status" aria-live="polite">
+        <span class="loading-spinner" aria-hidden="true"></span>
+    </div>
+}
+
+@code {
+    // Restores the session from localStorage exactly once per circuit, before the
+    // router (and its authorization) runs. This is what keeps a refresh signed in and
+    // stops AuthorizeRouteView from bouncing a valid session to /login on first paint.
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool ready;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await Session.RestoreAsync();
+        ready = true;
+        StateHasChanged();
+    }
+}

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Localization;
 using WatchParty.Admin.Components;
 using WatchParty.Admin.Services;
@@ -13,6 +14,9 @@ try
 
     builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
     builder.Services.AddScoped<AdminSession>();
+    builder.Services.AddScoped<AuthenticationStateProvider, AdminAuthenticationStateProvider>();
+    builder.Services.AddAuthorizationCore();
+    builder.Services.AddCascadingAuthenticationState();
 
     builder.Services.AddRazorComponents()
         .AddInteractiveServerComponents();

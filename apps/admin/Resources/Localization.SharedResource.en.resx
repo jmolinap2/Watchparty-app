@@ -78,6 +78,11 @@
   <data name="Metrics.Reconnections" xml:space="preserve"><value>Reconnections</value></data>
   <data name="Metrics.Rooms" xml:space="preserve"><value>Rooms</value></data>
   <data name="Metrics.Users" xml:space="preserve"><value>Users</value></data>
+  <data name="Nav.Collapse" xml:space="preserve"><value>Collapse menu</value></data>
+  <data name="Nav.Dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Nav.Expand" xml:space="preserve"><value>Expand menu</value></data>
+  <data name="Nav.Manage" xml:space="preserve"><value>Manage</value></data>
+  <data name="Nav.Navigation" xml:space="preserve"><value>Main navigation</value></data>
   <data name="Nav.Operation" xml:space="preserve"><value>Operation</value></data>
   <data name="Nav.Panel" xml:space="preserve"><value>Panel</value></data>
   <data name="Sections.AllowedDomains" xml:space="preserve"><value>Allowed domains</value></data>
@@ -107,4 +112,55 @@
   <data name="Validation.HostRequired" xml:space="preserve"><value>Host is required.</value></data>
   <data name="Validation.IdentifierRequired" xml:space="preserve"><value>Username or email is required.</value></data>
   <data name="Validation.PasswordRequired" xml:space="preserve"><value>Password is required.</value></data>
+  <data name="Common.Loading" xml:space="preserve"><value>Loading...</value></data>
+  <data name="Common.Empty" xml:space="preserve"><value>No records.</value></data>
+  <data name="Common.ViewAll" xml:space="preserve"><value>View all</value></data>
+  <data name="Common.All" xml:space="preserve"><value>All</value></data>
+  <data name="Common.Search" xml:space="preserve"><value>Search</value></data>
+  <data name="Common.Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Common.Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Common.Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Actions.Detail" xml:space="preserve"><value>Details</value></data>
+  <data name="Actions.Role" xml:space="preserve"><value>Role</value></data>
+  <data name="Table.LastLogin" xml:space="preserve"><value>Last login</value></data>
+  <data name="Enum.Role.User" xml:space="preserve"><value>User</value></data>
+  <data name="Users.Subtitle" xml:space="preserve"><value>Manage accounts, roles and blocks.</value></data>
+  <data name="Users.SearchPlaceholder" xml:space="preserve"><value>Search by name or email</value></data>
+  <data name="Users.BlockTitle" xml:space="preserve"><value>Block user</value></data>
+  <data name="Users.BlockReasonLabel" xml:space="preserve"><value>Reason</value></data>
+  <data name="Users.BlockReasonPlaceholder" xml:space="preserve"><value>Describe the block reason</value></data>
+  <data name="Users.RoleTitle" xml:space="preserve"><value>Change role</value></data>
+  <data name="Users.DetailTitle" xml:space="preserve"><value>User detail</value></data>
+  <data name="Users.RoomsCreated" xml:space="preserve"><value>Rooms created</value></data>
+  <data name="Users.MessagesSent" xml:space="preserve"><value>Messages sent</value></data>
+  <data name="Users.ReportsAgainst" xml:space="preserve"><value>Reports against</value></data>
+  <data name="Rooms.Subtitle" xml:space="preserve"><value>Monitor and close rooms.</value></data>
+  <data name="Rooms.CloseTitle" xml:space="preserve"><value>Close room</value></data>
+  <data name="Rooms.CloseConfirm" xml:space="preserve"><value>Participants will be removed and the room closed.</value></data>
+  <data name="Rooms.DetailTitle" xml:space="preserve"><value>Room detail</value></data>
+  <data name="Rooms.ClosedAt" xml:space="preserve"><value>Closed</value></data>
+  <data name="Rooms.HostId" xml:space="preserve"><value>Host (ID)</value></data>
+  <data name="Reports.Subtitle" xml:space="preserve"><value>Moderate user and message reports.</value></data>
+  <data name="Reports.ResolveTitle" xml:space="preserve"><value>Resolve report</value></data>
+  <data name="Reports.RejectTitle" xml:space="preserve"><value>Reject report</value></data>
+  <data name="Reports.NoteLabel" xml:space="preserve"><value>Resolution note</value></data>
+  <data name="Reports.NotePlaceholder" xml:space="preserve"><value>Add a note for the record</value></data>
+  <data name="Reports.DetailTitle" xml:space="preserve"><value>Report detail</value></data>
+  <data name="Reports.Reporter" xml:space="preserve"><value>Reported by</value></data>
+  <data name="Reports.TargetUser" xml:space="preserve"><value>Target user</value></data>
+  <data name="Reports.ResolvedAt" xml:space="preserve"><value>Resolved</value></data>
+  <data name="Domains.Subtitle" xml:space="preserve"><value>Control the allowed domains for video sources.</value></data>
+  <data name="Audit.Subtitle" xml:space="preserve"><value>Review activity and system events.</value></data>
+  <data name="Audit.SearchPlaceholder" xml:space="preserve"><value>Search action, resource or correlation</value></data>
+  <data name="Audit.OnlyErrors" xml:space="preserve"><value>Errors only</value></data>
+  <data name="Audit.DetailTitle" xml:space="preserve"><value>Audit detail</value></data>
+  <data name="Audit.HttpMethod" xml:space="preserve"><value>HTTP method</value></data>
+  <data name="Audit.RequestPath" xml:space="preserve"><value>Path</value></data>
+  <data name="Audit.Duration" xml:space="preserve"><value>Duration</value></data>
+  <data name="Audit.Actor" xml:space="preserve"><value>Actor</value></data>
+  <data name="Audit.Ip" xml:space="preserve"><value>IP</value></data>
+  <data name="Audit.Details" xml:space="preserve"><value>Details</value></data>
+  <data name="Audit.Exception" xml:space="preserve"><value>Exception</value></data>
+  <data name="Login.NotAdminTitle" xml:space="preserve"><value>No admin permissions</value></data>
+  <data name="Login.NotAdminMessage" xml:space="preserve"><value>Your credentials are valid, but this account is not an administrator. The panel is only available to admins.</value></data>
 </root>

@@ -1,0 +1,15 @@
+@inject NavigationManager Nav
+
+@code {
+    // Rendered by AuthorizeRouteView's NotAuthorized slot. Sends unauthenticated (or
+    // non-admin) visitors to the sign-in page, preserving where they were headed.
+    protected override void OnInitialized()
+    {
+        var returnUrl = Nav.ToBaseRelativePath(Nav.Uri);
+        var target = string.IsNullOrWhiteSpace(returnUrl) || returnUrl.StartsWith("login", StringComparison.OrdinalIgnoreCase)
+            ? "login"
+            : $"login?returnUrl={Uri.EscapeDataString("/" + returnUrl)}";
+
+        Nav.NavigateTo(target, replace: true);
+    }
+}

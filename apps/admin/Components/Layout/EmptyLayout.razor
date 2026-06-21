@@ -1,0 +1,15 @@
+@inherits LayoutComponentBase
+@inject IStringLocalizer<SharedResource> L
+
+<div class="auth-page">
+    <header class="auth-topbar">
+        <LanguageSwitcher />
+    </header>
+    @Body
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    @L["Layout.UnhandledError"]
+    <a href="." class="reload">@L["Common.Reload"]</a>
+    <span class="dismiss">x</span>
+</div>

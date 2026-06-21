@@ -5,6 +5,7 @@ WORKDIR /src
 # Restore first for better layer caching.
 COPY backend/Directory.Build.props ./backend/Directory.Build.props
 COPY backend/src/WatchParty.Observability ./backend/src/WatchParty.Observability
+COPY backend/src/WatchParty.Contracts ./backend/src/WatchParty.Contracts
 COPY apps/admin ./apps/admin
 RUN dotnet restore apps/admin/WatchParty.Admin.csproj
 

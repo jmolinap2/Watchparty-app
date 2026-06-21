@@ -1,0 +1,184 @@
+@page "/users"
+@inherits AdminPageBase
+
+<PageTitle>@Text("Sections.Users") - @Text("Admin.AppTitle")</PageTitle>
+
+<section class="admin-shell">
+    <header class="admin-header">
+        <div>
+            <h1>@Text("Sections.Users")</h1>
+            <p>@Text("Users.Subtitle")</p>
+        </div>
+    </header>
+
+    @if (Message is not null)
+    {
+        <div class="notice @(MessageIsError ? "notice-error" : null)">@Message</div>
+    }
+
+    <DataTable TItem="AdminUserDto" Title="@Text("Sections.Users")" ColumnCount="6"
+               Subtitle="@(result is null ? null : Text("Common.Total", result.TotalCount))"
+               Loading="@(result is null)" Items="result?.Items" EmptyText="@Text("Common.Empty")">
+        <Toolbar>
+            <EditForm Model="this" OnValidSubmit="ApplySearch" class="search-box">
+                <input @bind="search" placeholder="@Text("Users.SearchPlaceholder")" aria-label="@Text("Common.Search")" />
+                <button type="submit" class="ghost">@Text("Common.Search")</button>
+            </EditForm>
+        </Toolbar>
+        <HeaderTemplate>
+            <th>@Text("Table.Email")</th>
+            <th>@Text("Table.Name")</th>
+            <th>@Text("Table.Role")</th>
+            <th>@Text("Table.Status")</th>
+            <th>@Text("Table.LastLogin")</th>
+            <th class="col-actions"></th>
+        </HeaderTemplate>
+        <RowTemplate Context="user">
+            <td class="strong-cell">@user.Email</td>
+            <td>@user.DisplayName</td>
+            <td><span class="badge neutral">@TranslateValue("Enum.Role", user.Role)</span></td>
+            <td>
+                <span class="badge @(user.IsBlocked ? "danger" : "success")">
+                    @(user.IsBlocked ? Text("Status.Blocked") : Text("Status.Active"))
+                </span>
+            </td>
+            <td>@(user.LastLoginAtUtc?.ToLocalTime().ToString("g") ?? "—")</td>
+            <td class="actions">
+                <button class="ghost" @onclick="() => OpenDetailAsync(user)">@Text("Actions.Detail")</button>
+                <button class="ghost" @onclick="() => OpenRole(user)">@Text("Actions.Role")</button>
+                @if (user.IsBlocked)
+                {
+                    <button @onclick="() => UnblockAsync(user)">@Text("Actions.Unblock")</button>
+                }
+                else
+                {
+                    <button class="danger" @onclick="() => OpenBlock(user)">@Text("Actions.Block")</button>
+                }
+            </td>
+        </RowTemplate>
+        <Footer>
+            @if (result is not null)
+            {
+                <Pagination Page="result.Page" PageSize="result.PageSize" TotalCount="result.TotalCount"
+                            Info="@Text("Common.Total", result.TotalCount)" OnPageChanged="GoToPageAsync" />
+            }
+        </Footer>
+    </DataTable>
+</section>
+
+<ModalDialog Open="blockTarget is not null" Title="@Text("Users.BlockTitle")"
+             Description="@(blockTarget is null ? null : blockTarget.Email)"
+             ConfirmText="@Text("Actions.Block")" CancelText="@Text("Common.Cancel")"
+             Danger="true" Busy="Loading" CanConfirm="@(!string.IsNullOrWhiteSpace(blockReason))"
+             OnConfirm="ConfirmBlockAsync" OnCancel="() => blockTarget = null">
+    <label class="field-label">@Text("Users.BlockReasonLabel")</label>
+    <textarea @bind="blockReason" rows="3" placeholder="@Text("Users.BlockReasonPlaceholder")"></textarea>
+</ModalDialog>
+
+<ModalDialog Open="roleTarget is not null" Title="@Text("Users.RoleTitle")"
+             Description="@(roleTarget is null ? null : roleTarget.Email)"
+             ConfirmText="@Text("Common.Save")" CancelText="@Text("Common.Cancel")"
+             Busy="Loading" OnConfirm="ConfirmRoleAsync" OnCancel="() => roleTarget = null">
+    <label class="field-label">@Text("Table.Role")</label>
+    <select @bind="roleValue">
+        <option value="User">@TranslateValue("Enum.Role", "User")</option>
+        <option value="Admin">@TranslateValue("Enum.Role", "Admin")</option>
+    </select>
+</ModalDialog>
+
+<ModalDialog Open="detail is not null" Title="@Text("Users.DetailTitle")"
+             ConfirmText="@Text("Common.Close")" CancelText="@Text("Common.Close")"
+             CanConfirm="false" OnConfirm="() => detail = null" OnCancel="() => detail = null">
+    @if (detail is not null)
+    {
+        <dl class="detail-grid">
+            <div><dt>@Text("Table.Name")</dt><dd>@detail.User.DisplayName</dd></div>
+            <div><dt>@Text("Table.Email")</dt><dd>@detail.User.Email</dd></div>
+            <div><dt>@Text("Table.Role")</dt><dd>@TranslateValue("Enum.Role", detail.User.Role)</dd></div>
+            <div><dt>@Text("Table.Status")</dt><dd>@(detail.User.IsBlocked ? Text("Status.Blocked") : Text("Status.Active"))</dd></div>
+            <div><dt>@Text("Users.RoomsCreated")</dt><dd>@detail.RoomsCreated</dd></div>
+            <div><dt>@Text("Users.MessagesSent")</dt><dd>@detail.MessagesSent</dd></div>
+            <div><dt>@Text("Users.ReportsAgainst")</dt><dd>@detail.ReportsAgainst</dd></div>
+            <div><dt>@Text("Table.Created")</dt><dd>@detail.User.CreatedAtUtc.ToLocalTime().ToString("g")</dd></div>
+            @if (!string.IsNullOrWhiteSpace(detail.BlockedReason))
+            {
+                <div class="detail-wide"><dt>@Text("Users.BlockReasonLabel")</dt><dd>@detail.BlockedReason</dd></div>
+            }
+        </dl>
+    }
+</ModalDialog>
+
+@code {
+    private const int PageSize = 20;
+
+    private PagedResult<AdminUserDto>? result;
+    private string search = string.Empty;
+    private int page = 1;
+
+    private AdminUserDto? blockTarget;
+    private string blockReason = string.Empty;
+    private AdminUserDto? roleTarget;
+    private string roleValue = "User";
+    private AdminUserDetailDto? detail;
+
+    protected override Task LoadInitialAsync() => RunAsync(ReloadAsync);
+
+    private async Task ReloadAsync() =>
+        result = await Api.GetUsersAsync(string.IsNullOrWhiteSpace(search) ? null : search, page, PageSize);
+
+    private Task ApplySearch()
+    {
+        page = 1;
+        return RunAsync(ReloadAsync);
+    }
+
+    private Task GoToPageAsync(int newPage)
+    {
+        page = newPage;
+        return RunAsync(ReloadAsync);
+    }
+
+    private void OpenBlock(AdminUserDto user)
+    {
+        blockTarget = user;
+        blockReason = string.Empty;
+    }
+
+    private async Task ConfirmBlockAsync()
+    {
+        var target = blockTarget!;
+        blockTarget = null;
+        await RunAsync(async () =>
+        {
+            await Api.BlockUserAsync(target.Id, blockReason.Trim());
+            await ReloadAsync();
+        }, "Home.ActionApplied");
+    }
+
+    private Task UnblockAsync(AdminUserDto user) =>
+        RunAsync(async () =>
+        {
+            await Api.UnblockUserAsync(user.Id);
+            await ReloadAsync();
+        }, "Home.ActionApplied");
+
+    private void OpenRole(AdminUserDto user)
+    {
+        roleTarget = user;
+        roleValue = user.Role;
+    }
+
+    private async Task ConfirmRoleAsync()
+    {
+        var target = roleTarget!;
+        roleTarget = null;
+        await RunAsync(async () =>
+        {
+            await Api.SetUserRoleAsync(target.Id, roleValue);
+            await ReloadAsync();
+        }, "Home.ActionApplied");
+    }
+
+    private Task OpenDetailAsync(AdminUserDto user) =>
+        RunAsync(async () => detail = await Api.GetUserDetailAsync(user.Id));
+}

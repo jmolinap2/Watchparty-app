@@ -78,6 +78,11 @@
   <data name="Metrics.Reconnections" xml:space="preserve"><value>Reconexiones</value></data>
   <data name="Metrics.Rooms" xml:space="preserve"><value>Salas</value></data>
   <data name="Metrics.Users" xml:space="preserve"><value>Usuarios</value></data>
+  <data name="Nav.Collapse" xml:space="preserve"><value>Contraer menu</value></data>
+  <data name="Nav.Dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Nav.Expand" xml:space="preserve"><value>Expandir menu</value></data>
+  <data name="Nav.Manage" xml:space="preserve"><value>Gestion</value></data>
+  <data name="Nav.Navigation" xml:space="preserve"><value>Navegacion principal</value></data>
   <data name="Nav.Operation" xml:space="preserve"><value>Operación</value></data>
   <data name="Nav.Panel" xml:space="preserve"><value>Panel</value></data>
   <data name="Sections.AllowedDomains" xml:space="preserve"><value>Dominios permitidos</value></data>
@@ -107,4 +112,55 @@
   <data name="Validation.HostRequired" xml:space="preserve"><value>Host requerido.</value></data>
   <data name="Validation.IdentifierRequired" xml:space="preserve"><value>El usuario o correo es obligatorio.</value></data>
   <data name="Validation.PasswordRequired" xml:space="preserve"><value>La contraseña es obligatoria.</value></data>
+  <data name="Common.Loading" xml:space="preserve"><value>Cargando...</value></data>
+  <data name="Common.Empty" xml:space="preserve"><value>Sin registros.</value></data>
+  <data name="Common.ViewAll" xml:space="preserve"><value>Ver todo</value></data>
+  <data name="Common.All" xml:space="preserve"><value>Todos</value></data>
+  <data name="Common.Search" xml:space="preserve"><value>Buscar</value></data>
+  <data name="Common.Cancel" xml:space="preserve"><value>Cancelar</value></data>
+  <data name="Common.Save" xml:space="preserve"><value>Guardar</value></data>
+  <data name="Common.Close" xml:space="preserve"><value>Cerrar</value></data>
+  <data name="Actions.Detail" xml:space="preserve"><value>Detalle</value></data>
+  <data name="Actions.Role" xml:space="preserve"><value>Rol</value></data>
+  <data name="Table.LastLogin" xml:space="preserve"><value>Último acceso</value></data>
+  <data name="Enum.Role.User" xml:space="preserve"><value>Usuario</value></data>
+  <data name="Users.Subtitle" xml:space="preserve"><value>Gestiona cuentas, roles y bloqueos.</value></data>
+  <data name="Users.SearchPlaceholder" xml:space="preserve"><value>Buscar por nombre o correo</value></data>
+  <data name="Users.BlockTitle" xml:space="preserve"><value>Bloquear usuario</value></data>
+  <data name="Users.BlockReasonLabel" xml:space="preserve"><value>Motivo</value></data>
+  <data name="Users.BlockReasonPlaceholder" xml:space="preserve"><value>Describe el motivo del bloqueo</value></data>
+  <data name="Users.RoleTitle" xml:space="preserve"><value>Cambiar rol</value></data>
+  <data name="Users.DetailTitle" xml:space="preserve"><value>Detalle del usuario</value></data>
+  <data name="Users.RoomsCreated" xml:space="preserve"><value>Salas creadas</value></data>
+  <data name="Users.MessagesSent" xml:space="preserve"><value>Mensajes enviados</value></data>
+  <data name="Users.ReportsAgainst" xml:space="preserve"><value>Reportes en contra</value></data>
+  <data name="Rooms.Subtitle" xml:space="preserve"><value>Supervisa y cierra salas.</value></data>
+  <data name="Rooms.CloseTitle" xml:space="preserve"><value>Cerrar sala</value></data>
+  <data name="Rooms.CloseConfirm" xml:space="preserve"><value>Se expulsará a los participantes y la sala quedará cerrada.</value></data>
+  <data name="Rooms.DetailTitle" xml:space="preserve"><value>Detalle de la sala</value></data>
+  <data name="Rooms.ClosedAt" xml:space="preserve"><value>Cerrada</value></data>
+  <data name="Rooms.HostId" xml:space="preserve"><value>Anfitrión (ID)</value></data>
+  <data name="Reports.Subtitle" xml:space="preserve"><value>Modera reportes de usuarios y mensajes.</value></data>
+  <data name="Reports.ResolveTitle" xml:space="preserve"><value>Resolver reporte</value></data>
+  <data name="Reports.RejectTitle" xml:space="preserve"><value>Rechazar reporte</value></data>
+  <data name="Reports.NoteLabel" xml:space="preserve"><value>Nota de resolución</value></data>
+  <data name="Reports.NotePlaceholder" xml:space="preserve"><value>Añade una nota para el registro</value></data>
+  <data name="Reports.DetailTitle" xml:space="preserve"><value>Detalle del reporte</value></data>
+  <data name="Reports.Reporter" xml:space="preserve"><value>Reportado por</value></data>
+  <data name="Reports.TargetUser" xml:space="preserve"><value>Usuario objetivo</value></data>
+  <data name="Reports.ResolvedAt" xml:space="preserve"><value>Resuelto</value></data>
+  <data name="Domains.Subtitle" xml:space="preserve"><value>Controla los dominios permitidos para fuentes de video.</value></data>
+  <data name="Audit.Subtitle" xml:space="preserve"><value>Revisa la actividad y los eventos del sistema.</value></data>
+  <data name="Audit.SearchPlaceholder" xml:space="preserve"><value>Buscar acción, recurso o correlación</value></data>
+  <data name="Audit.OnlyErrors" xml:space="preserve"><value>Solo errores</value></data>
+  <data name="Audit.DetailTitle" xml:space="preserve"><value>Detalle de auditoría</value></data>
+  <data name="Audit.HttpMethod" xml:space="preserve"><value>Método HTTP</value></data>
+  <data name="Audit.RequestPath" xml:space="preserve"><value>Ruta</value></data>
+  <data name="Audit.Duration" xml:space="preserve"><value>Duración</value></data>
+  <data name="Audit.Actor" xml:space="preserve"><value>Actor</value></data>
+  <data name="Audit.Ip" xml:space="preserve"><value>IP</value></data>
+  <data name="Audit.Details" xml:space="preserve"><value>Detalles</value></data>
+  <data name="Audit.Exception" xml:space="preserve"><value>Excepción</value></data>
+  <data name="Login.NotAdminTitle" xml:space="preserve"><value>Sin permisos de administrador</value></data>
+  <data name="Login.NotAdminMessage" xml:space="preserve"><value>Tus credenciales son válidas, pero esta cuenta no tiene rol de administrador. El panel solo está disponible para administradores.</value></data>
 </root>

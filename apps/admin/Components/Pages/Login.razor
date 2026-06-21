@@ -1,4 +1,5 @@
 @page "/login"
+@layout EmptyLayout
 @inject AdminApiClient Api
 @inject AdminSession Session
 @inject NavigationManager Nav
@@ -39,7 +40,7 @@
         </section>
 
         <section class="login-form-panel">
-            <EditForm Model="model" OnSubmit="LoginAsync" FormName="login">
+            <EditForm Model="model" OnValidSubmit="LoginAsync" FormName="login">
                 <div class="field">
                     <label>@L["Auth.Identifier"]</label>
                     <InputText @bind-Value="model.Identifier" placeholder="admin" autocomplete="username" />
@@ -102,22 +103,24 @@
     private string? identifierError;
     private string? passwordError;
     private bool loading;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
     private string BackendApiUrl => Configuration["BackendApi:BaseUrl"] ?? "https://localhost:7001";
     private string AdminLogPath => WatchPartyLogPaths.ResolveLogFilePath(Configuration, "watchparty-admin.log");
     private string ApiLogPath => WatchPartyLogPaths.ResolveLogFilePath(Configuration, "watchparty-api.log", useConfiguredFileName: false);
     private string MigratorLogPath => WatchPartyLogPaths.ResolveLogFilePath(Configuration, "watchparty-migrator.log", useConfiguredFileName: false);
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender)
-        {
-            return;
-        }
+    private string Target => ReturnUrl is not null && ReturnUrl.StartsWith('/') ? ReturnUrl : "/";
 
-        await Session.RestoreAsync();
-        if (Session.IsAuthenticated)
+    protected override void OnAfterRender(bool firstRender)
+    {
+        // Session is restored by AdminSessionBoundary before the router runs, so an
+        // already-signed-in admin landing on /login is bounced straight to the panel.
+        if (firstRender && Session.IsAdmin)
         {
-            Nav.NavigateTo("/", replace: true);
+            Nav.NavigateTo(Target, replace: true);
         }
     }
 
@@ -137,8 +140,23 @@
         try
         {
             var result = await Api.LoginAsync(model.Identifier, model.Password);
-            await Session.SetTokenAsync(result, model.Identifier);
-            Nav.NavigateTo("/", replace: true);
+
+            if (!string.Equals(result.User.Role, AdminSession.AdminRole, StringComparison.OrdinalIgnoreCase))
+            {
+                // Valid credentials but not an administrator: never persist the session.
+                failure = new LoginFailure(
+                    L["Login.NotAdminTitle"],
+                    L["Login.NotAdminMessage"],
+                    "403",
+                    "identity.not_admin",
+                    null,
+                    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                Logger.LogWarning("Non-admin login rejected for {Identifier}. Role={Role}.", model.Identifier, result.User.Role);
+                return;
+            }
+
+            await Session.SetTokenAsync(result);
+            Nav.NavigateTo(Target, replace: true);
         }
         catch (AdminApiException ex)
         {

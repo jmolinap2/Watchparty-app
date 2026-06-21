@@ -1,23 +1,17 @@
 @page "/"
-@inject AdminApiClient Api
-@inject AdminSession Session
-@inject NavigationManager Nav
+@inherits AdminPageBase
 @inject IConfiguration Configuration
-@inject IStringLocalizer<SharedResource> L
-@inject ILogger<Home> Logger
 
 <PageTitle>@Text("Admin.AppTitle")</PageTitle>
 
 <section class="admin-shell">
     <header class="admin-header">
         <div>
-            <h1>@Text("Admin.AppTitle")</h1>
+            <h1>@Text("Nav.Dashboard")</h1>
             <p>@Text("Home.Subtitle")</p>
         </div>
         <div class="header-actions">
-            <span class="session-email">@Session.Email</span>
-            <button @onclick="LoadAsync" disabled="@loading">@Text("Common.Refresh")</button>
-            <button class="danger" @onclick="Logout">@Text("Common.SignOut")</button>
+            <button @onclick="LoadInitialAsync" disabled="@Loading">@Text("Common.Refresh")</button>
         </div>
     </header>
 
@@ -36,362 +30,81 @@
         </div>
     </section>
 
-    @if (!string.IsNullOrWhiteSpace(message))
+    @if (Message is not null)
     {
-        <div class="notice">@message</div>
+        <div class="notice @(MessageIsError ? "notice-error" : null)">@Message</div>
     }
 
-    @if (restoringSession)
+    @if (data is null)
     {
         <div class="loading-panel">
             <span class="loading-spinner" aria-hidden="true"></span>
-            <span>@Text("Home.RestoringSession")</span>
+            <span>@Text("Common.Loading")</span>
         </div>
     }
-
-    @if (!restoringSession && snapshot is not null)
+    else
     {
         <section class="metric-grid">
-            <MetricCard Label="@Text("Metrics.Users")" Value="@snapshot.Metrics.RegisteredUsers" />
-            <MetricCard Label="@Text("Metrics.ActiveUsers")" Value="@snapshot.Metrics.ActiveUsers" />
-            <MetricCard Label="@Text("Metrics.Rooms")" Value="@snapshot.Metrics.RoomsCreated" />
-            <MetricCard Label="@Text("Metrics.ActiveRooms")" Value="@snapshot.Metrics.ActiveRooms" />
-            <MetricCard Label="@Text("Metrics.Messages")" Value="@snapshot.Metrics.MessagesSent" />
-            <MetricCard Label="@Text("Metrics.OpenReports")" Value="@snapshot.Metrics.OpenReports" />
-            <MetricCard Label="@Text("Metrics.PlaybackErrors")" Value="@snapshot.Metrics.PlaybackErrors" />
-            <MetricCard Label="@Text("Metrics.Reconnections")" Value="@snapshot.Metrics.SignalrReconnections" />
+            <MetricCard Label="@Text("Metrics.Users")" Value="@data.Metrics.RegisteredUsers" />
+            <MetricCard Label="@Text("Metrics.ActiveUsers")" Value="@data.Metrics.ActiveUsers" />
+            <MetricCard Label="@Text("Metrics.Rooms")" Value="@data.Metrics.RoomsCreated" />
+            <MetricCard Label="@Text("Metrics.ActiveRooms")" Value="@data.Metrics.ActiveRooms" />
+            <MetricCard Label="@Text("Metrics.Messages")" Value="@data.Metrics.MessagesSent" />
+            <MetricCard Label="@Text("Metrics.OpenReports")" Value="@data.Metrics.OpenReports" />
+            <MetricCard Label="@Text("Metrics.PlaybackErrors")" Value="@data.Metrics.PlaybackErrors" />
+            <MetricCard Label="@Text("Metrics.Reconnections")" Value="@data.Metrics.SignalrReconnections" />
         </section>
 
-        <section class="panel">
-            <div class="panel-title">
-                <h2>@Text("Sections.Users")</h2>
-                <span>@Text("Common.Total", snapshot.Users.TotalCount)</span>
-            </div>
-            <table>
-                <thead>
-                <tr>
-                    <th>@Text("Table.Email")</th>
+        <div class="dashboard-columns">
+            <DataTable TItem="AdminUserDto" Title="@Text("Sections.Users")" ColumnCount="2"
+                       Items="data.RecentUsers.Items" EmptyText="@Text("Common.Empty")">
+                <Toolbar><a class="link-pill" href="users">@Text("Common.ViewAll")</a></Toolbar>
+                <HeaderTemplate>
                     <th>@Text("Table.Name")</th>
                     <th>@Text("Table.Role")</th>
-                    <th>@Text("Table.Status")</th>
-                    <th></th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach (var user in snapshot.Users.Items)
-                {
-                    <tr>
-                        <td class="strong-cell">@user.Email</td>
-                        <td>@user.DisplayName</td>
-                        <td><span class="badge neutral">@TranslateValue("Enum.Role", user.Role)</span></td>
-                        <td>
-                            <span class="badge @(user.IsBlocked ? "danger" : "success")">
-                                @(user.IsBlocked ? Text("Status.Blocked") : Text("Status.Active"))
-                            </span>
-                        </td>
-                        <td class="actions">
-                            @if (user.IsBlocked)
-                            {
-                                <button @onclick="() => UnblockUserAsync(user.Id)">@Text("Actions.Unblock")</button>
-                            }
-                            else
-                            {
-                                <button @onclick="() => BlockUserAsync(user.Id)">@Text("Actions.Block")</button>
-                            }
-                        </td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </section>
+                </HeaderTemplate>
+                <RowTemplate Context="user">
+                    <td class="strong-cell">@user.DisplayName<small class="muted-line">@user.Email</small></td>
+                    <td><span class="badge neutral">@TranslateValue("Enum.Role", user.Role)</span></td>
+                </RowTemplate>
+            </DataTable>
 
-        <section class="panel">
-            <div class="panel-title">
-                <h2>@Text("Sections.Rooms")</h2>
-                <span>@Text("Common.Total", snapshot.Rooms.TotalCount)</span>
-            </div>
-            <table>
-                <thead>
-                <tr>
-                    <th>@Text("Table.Code")</th>
+            <DataTable TItem="AdminRoomDto" Title="@Text("Sections.Rooms")" ColumnCount="2"
+                       Items="data.ActiveRooms.Items" EmptyText="@Text("Common.Empty")">
+                <Toolbar><a class="link-pill" href="rooms">@Text("Common.ViewAll")</a></Toolbar>
+                <HeaderTemplate>
                     <th>@Text("Table.Name")</th>
-                    <th>@Text("Table.Status")</th>
-                    <th>@Text("Table.Members")</th>
                     <th>@Text("Table.Online")</th>
-                    <th></th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach (var room in snapshot.Rooms.Items)
-                {
-                    <tr>
-                        <td class="strong-cell">@room.Code</td>
-                        <td>@room.Name</td>
-                        <td><span class="badge neutral">@TranslateValue("Enum.RoomStatus", room.Status)</span></td>
-                        <td>@room.MemberCount</td>
-                        <td>@room.OnlineCount</td>
-                        <td class="actions">
-                            @if (!string.Equals(room.Status, "Closed", StringComparison.OrdinalIgnoreCase))
-                            {
-                                <button @onclick="() => CloseRoomAsync(room.Id)">@Text("Actions.Close")</button>
-                            }
-                        </td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </section>
+                </HeaderTemplate>
+                <RowTemplate Context="room">
+                    <td class="strong-cell">@room.Name<small class="muted-line">@room.Code</small></td>
+                    <td>@room.OnlineCount / @room.MemberCount</td>
+                </RowTemplate>
+            </DataTable>
 
-        <section class="panel">
-            <div class="panel-title">
-                <h2>@Text("Sections.Reports")</h2>
-                <span>@Text("Common.Total", snapshot.Reports.TotalCount)</span>
-            </div>
-            <table>
-                <thead>
-                <tr>
+            <DataTable TItem="ReportDto" Title="@Text("Metrics.OpenReports")" ColumnCount="2"
+                       Items="data.OpenReports.Items" EmptyText="@Text("Common.Empty")">
+                <Toolbar><a class="link-pill" href="reports">@Text("Common.ViewAll")</a></Toolbar>
+                <HeaderTemplate>
                     <th>@Text("Table.Type")</th>
                     <th>@Text("Table.Reason")</th>
-                    <th>@Text("Table.Status")</th>
-                    <th>@Text("Table.Created")</th>
-                    <th></th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach (var report in snapshot.Reports.Items)
-                {
-                    <tr>
-                        <td><span class="badge neutral">@TranslateValue("Enum.ReportType", report.Type)</span></td>
-                        <td>@report.Reason</td>
-                        <td><span class="badge @(string.Equals(report.Status, "Open", StringComparison.OrdinalIgnoreCase) ? "warning" : "success")">@TranslateValue("Enum.ReportStatus", report.Status)</span></td>
-                        <td>@report.CreatedAtUtc.ToLocalTime().ToString("g")</td>
-                        <td class="actions">
-                            @if (string.Equals(report.Status, "Open", StringComparison.OrdinalIgnoreCase))
-                            {
-                                <button @onclick="() => ResolveReportAsync(report.Id)">@Text("Actions.Resolve")</button>
-                                <button @onclick="() => RejectReportAsync(report.Id)">@Text("Actions.Reject")</button>
-                            }
-                        </td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </section>
-
-        <section class="panel">
-            <div class="panel-title">
-                <h2>@Text("Sections.AllowedDomains")</h2>
-                <div class="inline-form">
-                    <input placeholder="cdn.example.com" @bind="newDomain" @bind:event="oninput" />
-                    <button @onclick="AddDomainAsync">@Text("Actions.Add")</button>
-                </div>
-            </div>
-            <table>
-                <thead>
-                <tr>
-                    <th>@Text("Table.Host")</th>
-                    <th>@Text("Table.Status")</th>
-                    <th></th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach (var domain in snapshot.Domains)
-                {
-                    <tr>
-                        <td class="strong-cell">@domain.Host</td>
-                        <td>
-                            <span class="badge @(domain.IsEnabled ? "success" : "neutral")">
-                                @(domain.IsEnabled ? Text("Status.Allowed") : Text("Status.Disabled"))
-                            </span>
-                        </td>
-                        <td class="actions">
-                            <button @onclick="() => ToggleDomainAsync(domain.Id, !domain.IsEnabled)">
-                                @(domain.IsEnabled ? Text("Actions.Disable") : Text("Actions.Enable"))
-                            </button>
-                        </td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </section>
-
-        <section class="panel">
-            <div class="panel-title">
-                <h2>@Text("Sections.Audit")</h2>
-                <span>@Text("Common.Total", snapshot.AuditLogs.TotalCount)</span>
-            </div>
-            <table>
-                <thead>
-                <tr>
-                    <th>@Text("Table.Category")</th>
-                    <th>@Text("Table.Action")</th>
-                    <th>@Text("Table.Resource")</th>
-                    <th>@Text("Table.Status")</th>
-                    <th>@Text("Table.Date")</th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach (var log in snapshot.AuditLogs.Items)
-                {
-                    <tr>
-                        <td><span class="badge neutral">@log.Category</span></td>
-                        <td>@log.Action</td>
-                        <td>@(log.Resource ?? log.TargetType ?? "-")</td>
-                        <td><span class="badge @(log.StatusCode is >= 400 ? "danger" : "success")">@(log.StatusCode?.ToString() ?? "-")</span></td>
-                        <td>@log.CreatedAtUtc.ToLocalTime().ToString("g")</td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </section>
+                </HeaderTemplate>
+                <RowTemplate Context="report">
+                    <td><span class="badge warning">@TranslateValue("Enum.ReportType", report.Type)</span></td>
+                    <td>@report.Reason</td>
+                </RowTemplate>
+            </DataTable>
+        </div>
     }
 </section>
 
 @code {
-    private string newDomain = string.Empty;
-    private string message = string.Empty;
-    private bool loading;
-    private bool restoringSession = true;
-    private AdminSnapshot? snapshot;
+    private DashboardData? data;
+
     private string BackendApiUrl => Configuration["BackendApi:BaseUrl"] ?? "https://localhost:7001";
     private string AdminLogPath => WatchPartyLogPaths.ResolveLogFilePath(Configuration, "watchparty-admin.log");
     private string ApiLogPath => WatchPartyLogPaths.ResolveLogFilePath(Configuration, "watchparty-api.log", useConfiguredFileName: false);
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender)
-        {
-            return;
-        }
-
-        await Session.RestoreAsync();
-        if (!Session.IsAuthenticated)
-        {
-            Nav.NavigateTo("/login", replace: true);
-            return;
-        }
-
-        restoringSession = false;
-        await LoadAsync();
-        StateHasChanged();
-    }
-
-    private async Task Logout()
-    {
-        await Session.ClearAsync();
-        Nav.NavigateTo("/login", replace: true);
-    }
-
-    private async Task LoadAsync()
-    {
-        await RunAsync(async () =>
-        {
-            snapshot = await Api.LoadAsync(Session.Token!);
-            message = Text("Home.Updated", DateTime.Now.ToString("t"));
-        });
-    }
-
-    private Task BlockUserAsync(Guid userId) =>
-        RunAndReloadAsync(() => Api.BlockUserAsync(Session.Token!, userId, Text("Action.BlockReason")));
-
-    private Task UnblockUserAsync(Guid userId) =>
-        RunAndReloadAsync(() => Api.UnblockUserAsync(Session.Token!, userId));
-
-    private Task CloseRoomAsync(Guid roomId) =>
-        RunAndReloadAsync(() => Api.CloseRoomAsync(Session.Token!, roomId));
-
-    private Task ResolveReportAsync(Guid reportId) =>
-        RunAndReloadAsync(() => Api.ResolveReportAsync(Session.Token!, reportId, Text("Action.ResolveNote")));
-
-    private Task RejectReportAsync(Guid reportId) =>
-        RunAndReloadAsync(() => Api.RejectReportAsync(Session.Token!, reportId, Text("Action.RejectNote")));
-
-    private async Task AddDomainAsync()
-    {
-        var host = newDomain.Trim();
-        if (host.Length == 0)
-        {
-            message = Text("Validation.HostRequired");
-            return;
-        }
-
-        await RunAndReloadAsync(() => Api.AddAllowedDomainAsync(Session.Token!, host));
-        newDomain = string.Empty;
-    }
-
-    private Task ToggleDomainAsync(Guid id, bool enabled) =>
-        RunAndReloadAsync(() => Api.ToggleDomainAsync(Session.Token!, id, enabled));
-
-    private async Task RunAndReloadAsync(Func<Task> action)
-    {
-        await RunAsync(async () =>
-        {
-            await action();
-            snapshot = await Api.LoadAsync(Session.Token!);
-            message = Text("Home.ActionApplied", DateTime.Now.ToString("t"));
-        });
-    }
-
-    private async Task RunAsync(Func<Task> action)
-    {
-        loading = true;
-        try
-        {
-            await action();
-        }
-        catch (AdminApiException ex)
-        {
-            message = FormatApiFailure(ex);
-            Logger.LogWarning(
-                ex,
-                "Admin operation failed. Status={Status}; Code={Code}; CorrelationId={CorrelationId}; BackendApi={BackendApi}",
-                ex.StatusText,
-                ex.ApiCode ?? "-",
-                ex.CorrelationId ?? "-",
-                BackendApiUrl);
-        }
-        catch (Exception ex)
-        {
-            message = ex.Message;
-            Logger.LogError(ex, "Unexpected admin operation failure.");
-        }
-        finally
-        {
-            loading = false;
-        }
-    }
-
-    private string FormatApiFailure(AdminApiException ex)
-    {
-        var suffix = string.IsNullOrWhiteSpace(ex.CorrelationId)
-            ? string.Empty
-            : Text("Errors.CorrelationSuffix", ex.CorrelationId);
-
-        if (!ex.HasHttpResponse)
-        {
-            return Text("Errors.ApiUnavailable", ex.BackendApi ?? new Uri("about:blank"), suffix);
-        }
-
-        if ((int)ex.StatusCode!.Value >= 500)
-        {
-            return Text("Errors.ApiServer", ex.StatusText, suffix);
-        }
-
-        if (ex.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
-        {
-            return Text("Errors.Unauthorized", ex.StatusText, suffix);
-        }
-
-        return Text("Errors.ApiRejected", ex.StatusText, ex.ApiCode ?? Text("Common.NoCode"), ex.ApiMessage ?? ex.Message, suffix);
-    }
-
-    private string TranslateValue(string prefix, string value)
-    {
-        var key = $"{prefix}.{value}";
-        var localized = L[key];
-        return localized.ResourceNotFound ? value : localized.Value;
-    }
-
-    private string Text(string key) => L[key].Value;
-    private string Text(string key, params object[] arguments) => L[key, arguments].Value;
+    protected override Task LoadInitialAsync() =>
+        RunAsync(async () => data = await Api.GetDashboardAsync());
 }

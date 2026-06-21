@@ -1,22 +1,121 @@
 @inject IStringLocalizer<SharedResource> L
 
-<div class="brand-panel">
-    <div class="brand-mark">W</div>
-    <div>
-        <a class="navbar-brand" href="">WatchParty</a>
-        <span>@L["Admin.Studio"]</span>
+<nav class="floating-sidebar @(IsExpanded ? "is-expanded" : "is-collapsed")" aria-label="@Text("Nav.Navigation")">
+    <div class="sidebar-header">
+        <a class="brand-panel" href="" title="WatchParty Admin" aria-label="WatchParty Admin">
+            <span class="brand-mark">W</span>
+            <span class="brand-copy">
+                <span class="navbar-brand">WatchParty</span>
+                <span>@Text("Admin.Studio")</span>
+            </span>
+        </a>
+
+        <button type="button"
+                class="sidebar-toggle"
+                title="@ToggleTitle"
+                aria-label="@ToggleTitle"
+                aria-pressed="@(!IsExpanded)"
+                @onclick="ToggleSidebarAsync">
+            <span class="nav-icon icon-menu" aria-hidden="true"></span>
+        </button>
     </div>
-</div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+    <AuthorizeView Roles="Admin">
+        <div class="nav-scrollable">
+        <p class="nav-section">@Text("Nav.Operation")</p>
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <p class="nav-section">@L["Nav.Operation"]</p>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> @L["Nav.Panel"]
+        <div class="nav-node">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All" title="@Text("Nav.Dashboard")" aria-label="@Text("Nav.Dashboard")">
+                <span class="nav-icon icon-panel" aria-hidden="true"></span>
+                <span class="nav-label">@Text("Nav.Dashboard")</span>
             </NavLink>
+            <div class="nav-flyout" role="tooltip">
+                <a href="/" class="nav-flyout-link">@Text("Nav.Dashboard")</a>
+            </div>
         </div>
-    </nav>
-</div>
+
+        <p class="nav-section">@Text("Nav.Manage")</p>
+
+        <div class="nav-node nav-group @(managementOpen ? "is-open" : null)">
+            <button type="button"
+                    class="nav-link nav-group-button"
+                    title="@Text("Nav.Manage")"
+                    aria-label="@Text("Nav.Manage")"
+                    aria-expanded="@managementOpen"
+                    @onclick="ToggleManagementAsync">
+                <span class="nav-icon icon-manage" aria-hidden="true"></span>
+                <span class="nav-label">@Text("Nav.Manage")</span>
+                <span class="nav-chevron" aria-hidden="true"></span>
+            </button>
+
+            @if (IsExpanded && managementOpen)
+            {
+                <div class="nav-submenu">
+                    <NavLink class="nav-link nav-subitem" href="users" title="@Text("Sections.Users")">
+                        <span class="nav-icon icon-users" aria-hidden="true"></span>
+                        <span class="nav-label">@Text("Sections.Users")</span>
+                    </NavLink>
+                    <NavLink class="nav-link nav-subitem" href="rooms" title="@Text("Sections.Rooms")">
+                        <span class="nav-icon icon-rooms" aria-hidden="true"></span>
+                        <span class="nav-label">@Text("Sections.Rooms")</span>
+                    </NavLink>
+                    <NavLink class="nav-link nav-subitem" href="reports" title="@Text("Sections.Reports")">
+                        <span class="nav-icon icon-reports" aria-hidden="true"></span>
+                        <span class="nav-label">@Text("Sections.Reports")</span>
+                    </NavLink>
+                    <NavLink class="nav-link nav-subitem" href="domains" title="@Text("Sections.AllowedDomains")">
+                        <span class="nav-icon icon-domains" aria-hidden="true"></span>
+                        <span class="nav-label">@Text("Sections.AllowedDomains")</span>
+                    </NavLink>
+                    <NavLink class="nav-link nav-subitem" href="audit" title="@Text("Sections.Audit")">
+                        <span class="nav-icon icon-audit" aria-hidden="true"></span>
+                        <span class="nav-label">@Text("Sections.Audit")</span>
+                    </NavLink>
+                </div>
+            }
+
+            <div class="nav-flyout" role="tooltip">
+                <strong>@Text("Nav.Manage")</strong>
+                <a href="/users" class="nav-flyout-link">@Text("Sections.Users")</a>
+                <a href="/rooms" class="nav-flyout-link">@Text("Sections.Rooms")</a>
+                <a href="/reports" class="nav-flyout-link">@Text("Sections.Reports")</a>
+                <a href="/domains" class="nav-flyout-link">@Text("Sections.AllowedDomains")</a>
+                <a href="/audit" class="nav-flyout-link">@Text("Sections.Audit")</a>
+            </div>
+        </div>
+        </div>
+    </AuthorizeView>
+</nav>
+
+@code {
+    private bool managementOpen = true;
+
+    [Parameter]
+    public bool IsExpanded { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<bool> IsExpandedChanged { get; set; }
+
+    private string ToggleTitle => IsExpanded ? Text("Nav.Collapse") : Text("Nav.Expand");
+
+    private async Task ToggleSidebarAsync()
+    {
+        IsExpanded = !IsExpanded;
+        await IsExpandedChanged.InvokeAsync(IsExpanded);
+    }
+
+    private async Task ToggleManagementAsync()
+    {
+        if (!IsExpanded)
+        {
+            IsExpanded = true;
+            managementOpen = true;
+            await IsExpandedChanged.InvokeAsync(IsExpanded);
+            return;
+        }
+
+        managementOpen = !managementOpen;
+    }
+
+    private string Text(string key) => L[key].Value;
+}

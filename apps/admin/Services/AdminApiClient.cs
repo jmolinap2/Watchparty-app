@@ -1,14 +1,26 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using WatchParty.Contracts.Admin;
+using WatchParty.Contracts.Common;
+using WatchParty.Contracts.Identity;
+using WatchParty.Contracts.Reports;
 
 namespace WatchParty.Admin.Services;
 
-public sealed class AdminApiClient(HttpClient httpClient, ILogger<AdminApiClient> logger)
+/// <summary>
+/// Thin typed wrapper over the WatchParty backend admin API. The bearer token is
+/// taken from <see cref="AdminSession"/> so callers never thread it through by hand.
+/// DTOs are reused from <c>WatchParty.Contracts</c> to keep a single source of truth.
+/// </summary>
+public sealed class AdminApiClient(HttpClient httpClient, AdminSession session, ILogger<AdminApiClient> logger)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    // ---- Auth --------------------------------------------------------------
 
     public async Task<AuthResponse> LoginAsync(string identifier, string password, CancellationToken cancellationToken = default)
     {
@@ -23,44 +35,94 @@ public sealed class AdminApiClient(HttpClient httpClient, ILogger<AdminApiClient
                ?? throw new InvalidOperationException("Empty response from login.");
     }
 
-    public async Task<AdminSnapshot> LoadAsync(string token, CancellationToken cancellationToken = default)
-    {
-        var metrics = await GetAsync<MetricsDto>("api/admin/metrics", token, cancellationToken);
-        var users = await GetAsync<PagedResult<AdminUserDto>>("api/admin/users?page=1&pageSize=20", token, cancellationToken);
-        var rooms = await GetAsync<PagedResult<AdminRoomDto>>("api/admin/rooms?page=1&pageSize=20", token, cancellationToken);
-        var reports = await GetAsync<PagedResult<ReportDto>>("api/admin/reports?page=1&pageSize=20", token, cancellationToken);
-        var domains = await GetAsync<List<AllowedDomainDto>>("api/admin/allowed-domains", token, cancellationToken);
-        var auditLogs = await GetAsync<PagedResult<AuditLogDto>>("api/admin/audit-logs?page=1&pageSize=20", token, cancellationToken);
+    // ---- Reads (parallel-friendly, each call is independent) ---------------
 
-        return new AdminSnapshot(metrics, users, rooms, reports, domains, auditLogs);
+    public Task<MetricsDto> GetMetricsAsync(CancellationToken cancellationToken = default) =>
+        GetAsync<MetricsDto>("api/admin/metrics", cancellationToken);
+
+    public Task<PagedResult<AdminUserDto>> GetUsersAsync(string? search, int page, int pageSize, CancellationToken cancellationToken = default) =>
+        GetAsync<PagedResult<AdminUserDto>>(
+            BuildQuery("api/admin/users", ("search", search), ("page", page), ("pageSize", pageSize)),
+            cancellationToken);
+
+    public Task<AdminUserDetailDto> GetUserDetailAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        GetAsync<AdminUserDetailDto>($"api/admin/users/{userId}", cancellationToken);
+
+    public Task<PagedResult<AdminRoomDto>> GetRoomsAsync(string? status, int page, int pageSize, CancellationToken cancellationToken = default) =>
+        GetAsync<PagedResult<AdminRoomDto>>(
+            BuildQuery("api/admin/rooms", ("status", status), ("page", page), ("pageSize", pageSize)),
+            cancellationToken);
+
+    public Task<AdminRoomDto> GetRoomDetailAsync(Guid roomId, CancellationToken cancellationToken = default) =>
+        GetAsync<AdminRoomDto>($"api/admin/rooms/{roomId}", cancellationToken);
+
+    public Task<PagedResult<ReportDto>> GetReportsAsync(string? status, int page, int pageSize, CancellationToken cancellationToken = default) =>
+        GetAsync<PagedResult<ReportDto>>(
+            BuildQuery("api/admin/reports", ("status", status), ("page", page), ("pageSize", pageSize)),
+            cancellationToken);
+
+    public Task<ReportDto> GetReportDetailAsync(Guid reportId, CancellationToken cancellationToken = default) =>
+        GetAsync<ReportDto>($"api/admin/reports/{reportId}", cancellationToken);
+
+    public Task<IReadOnlyList<AllowedDomainDto>> GetDomainsAsync(CancellationToken cancellationToken = default) =>
+        GetAsync<IReadOnlyList<AllowedDomainDto>>("api/admin/allowed-domains", cancellationToken);
+
+    public Task<PagedResult<AuditLogDto>> GetAuditLogsAsync(AuditLogSearchRequest request, CancellationToken cancellationToken = default) =>
+        GetAsync<PagedResult<AuditLogDto>>(
+            BuildQuery(
+                "api/admin/audit-logs",
+                ("search", request.Search),
+                ("category", request.Category),
+                ("action", request.Action),
+                ("resource", request.Resource),
+                ("hasException", request.HasException),
+                ("page", request.Page),
+                ("pageSize", request.PageSize)),
+            cancellationToken);
+
+    /// <summary>Loads everything the dashboard needs in parallel (single round-trip latency).</summary>
+    public async Task<DashboardData> GetDashboardAsync(CancellationToken cancellationToken = default)
+    {
+        var metrics = GetMetricsAsync(cancellationToken);
+        var users = GetUsersAsync(null, 1, 5, cancellationToken);
+        var rooms = GetRoomsAsync(null, 1, 5, cancellationToken);
+        var reports = GetReportsAsync("Open", 1, 5, cancellationToken);
+
+        await Task.WhenAll(metrics, users, rooms, reports);
+        return new DashboardData(metrics.Result, users.Result, rooms.Result, reports.Result);
     }
 
-    public Task BlockUserAsync(string token, Guid userId, string reason, CancellationToken cancellationToken = default) =>
-        PostAsync($"api/admin/users/{userId}/block", token, new { reason }, cancellationToken);
+    // ---- Commands ----------------------------------------------------------
 
-    public Task UnblockUserAsync(string token, Guid userId, CancellationToken cancellationToken = default) =>
-        PostAsync($"api/admin/users/{userId}/unblock", token, null, cancellationToken);
+    public Task BlockUserAsync(Guid userId, string reason, CancellationToken cancellationToken = default) =>
+        PostAsync($"api/admin/users/{userId}/block", new { reason }, cancellationToken);
 
-    public Task CloseRoomAsync(string token, Guid roomId, CancellationToken cancellationToken = default) =>
-        PostAsync($"api/admin/rooms/{roomId}/close", token, null, cancellationToken);
+    public Task UnblockUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        PostAsync($"api/admin/users/{userId}/unblock", null, cancellationToken);
 
-    public Task ResolveReportAsync(string token, Guid reportId, string note, CancellationToken cancellationToken = default) =>
-        PostAsync($"api/admin/reports/{reportId}/resolve", token, new { note }, cancellationToken);
+    public Task SetUserRoleAsync(Guid userId, string role, CancellationToken cancellationToken = default) =>
+        SendBodyAsync(HttpMethod.Put, $"api/admin/users/{userId}/role", new { role }, cancellationToken);
 
-    public Task RejectReportAsync(string token, Guid reportId, string note, CancellationToken cancellationToken = default) =>
-        PostAsync($"api/admin/reports/{reportId}/reject", token, new { note }, cancellationToken);
+    public Task CloseRoomAsync(Guid roomId, CancellationToken cancellationToken = default) =>
+        PostAsync($"api/admin/rooms/{roomId}/close", null, cancellationToken);
 
-    public Task AddAllowedDomainAsync(string token, string host, CancellationToken cancellationToken = default) =>
-        PostAsync("api/admin/allowed-domains", token, new { host }, cancellationToken);
+    public Task ResolveReportAsync(Guid reportId, string note, CancellationToken cancellationToken = default) =>
+        PostAsync($"api/admin/reports/{reportId}/resolve", new { note }, cancellationToken);
 
-    public Task ToggleDomainAsync(string token, Guid id, bool enabled, CancellationToken cancellationToken = default) =>
-        PostAsync($"api/admin/allowed-domains/{id}/{(enabled ? "enable" : "disable")}", token, null, cancellationToken);
+    public Task RejectReportAsync(Guid reportId, string note, CancellationToken cancellationToken = default) =>
+        PostAsync($"api/admin/reports/{reportId}/reject", new { note }, cancellationToken);
 
-    private async Task<T> GetAsync<T>(string path, string token, CancellationToken cancellationToken)
+    public Task AddAllowedDomainAsync(string host, CancellationToken cancellationToken = default) =>
+        PostAsync("api/admin/allowed-domains", new { host }, cancellationToken);
+
+    public Task ToggleDomainAsync(Guid id, bool enabled, CancellationToken cancellationToken = default) =>
+        PostAsync($"api/admin/allowed-domains/{id}/{(enabled ? "enable" : "disable")}", null, cancellationToken);
+
+    // ---- Transport ---------------------------------------------------------
+
+    private async Task<T> GetAsync<T>(string path, CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, path);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
+        using var request = Authorized(HttpMethod.Get, path);
         using var response = await SendAsync(request, $"GET {path}", cancellationToken);
         await EnsureSuccessAsync(response, $"GET {path}", cancellationToken);
 
@@ -68,16 +130,58 @@ public sealed class AdminApiClient(HttpClient httpClient, ILogger<AdminApiClient
             ?? throw new InvalidOperationException($"Empty response from {path}.");
     }
 
-    private async Task PostAsync(string path, string token, object? body, CancellationToken cancellationToken)
+    private Task PostAsync(string path, object? body, CancellationToken cancellationToken) =>
+        SendBodyAsync(HttpMethod.Post, path, body, cancellationToken);
+
+    private async Task SendBodyAsync(HttpMethod method, string path, object? body, CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, path);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var request = Authorized(method, path);
         request.Content = body is null
             ? new StringContent("{}", Encoding.UTF8, "application/json")
             : JsonContent.Create(body, options: JsonOptions);
 
-        using var response = await SendAsync(request, $"POST {path}", cancellationToken);
-        await EnsureSuccessAsync(response, $"POST {path}", cancellationToken);
+        using var response = await SendAsync(request, $"{method} {path}", cancellationToken);
+        await EnsureSuccessAsync(response, $"{method} {path}", cancellationToken);
+    }
+
+    private HttpRequestMessage Authorized(HttpMethod method, string path)
+    {
+        var request = new HttpRequestMessage(method, path);
+        if (!string.IsNullOrWhiteSpace(session.Token))
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", session.Token);
+        }
+
+        return request;
+    }
+
+    private static string BuildQuery(string path, params (string Key, object? Value)[] parameters)
+    {
+        var builder = new StringBuilder(path);
+        var first = true;
+
+        foreach (var (key, value) in parameters)
+        {
+            var text = value switch
+            {
+                null => null,
+                string s => string.IsNullOrWhiteSpace(s) ? null : s,
+                bool b => b ? "true" : "false",
+                IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
+                _ => value.ToString()
+            };
+
+            if (text is null)
+            {
+                continue;
+            }
+
+            builder.Append(first ? '?' : '&');
+            builder.Append(Uri.EscapeDataString(key)).Append('=').Append(Uri.EscapeDataString(text));
+            first = false;
+        }
+
+        return builder.ToString();
     }
 
     private async Task<HttpResponseMessage> SendAsync(
@@ -207,6 +311,7 @@ public sealed class AdminApiException : Exception
     public string? CorrelationId { get; }
     public string? ResponseBody { get; }
     public bool HasHttpResponse => StatusCode.HasValue;
+    public bool IsUnauthorized => StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden;
 
     public string StatusText => StatusCode is null
         ? "Sin respuesta HTTP"
@@ -224,87 +329,9 @@ public sealed class AdminApiException : Exception
             innerException: innerException);
 }
 
-public sealed record AdminSnapshot(
+/// <summary>Aggregate loaded in parallel for the dashboard overview.</summary>
+public sealed record DashboardData(
     MetricsDto Metrics,
-    PagedResult<AdminUserDto> Users,
-    PagedResult<AdminRoomDto> Rooms,
-    PagedResult<ReportDto> Reports,
-    IReadOnlyList<AllowedDomainDto> Domains,
-    PagedResult<AuditLogDto> AuditLogs);
-
-public sealed record AuthResponse(
-    string AccessToken,
-    DateTimeOffset AccessTokenExpiresAtUtc,
-    string RefreshToken,
-    DateTimeOffset RefreshTokenExpiresAtUtc);
-
-public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSize, long TotalCount);
-
-public sealed record MetricsDto(
-    long RegisteredUsers,
-    long ActiveUsers,
-    long RoomsCreated,
-    long ActiveRooms,
-    long MessagesSent,
-    long OpenReports,
-    long ResolvedReports,
-    long PlaybackErrors,
-    long SignalrReconnections);
-
-public sealed record AdminUserDto(
-    Guid Id,
-    string Email,
-    string DisplayName,
-    string Role,
-    bool IsBlocked,
-    bool EmailConfirmed,
-    DateTimeOffset CreatedAtUtc,
-    DateTimeOffset? LastLoginAtUtc);
-
-public sealed record AdminRoomDto(
-    Guid Id,
-    string Code,
-    string Name,
-    Guid HostUserId,
-    string Status,
-    int MemberCount,
-    int OnlineCount,
-    DateTimeOffset CreatedAtUtc,
-    DateTimeOffset? ClosedAtUtc);
-
-public sealed record AllowedDomainDto(Guid Id, string Host, bool IsEnabled, DateTimeOffset CreatedAtUtc);
-
-public sealed record ReportDto(
-    Guid Id,
-    string Type,
-    Guid ReporterUserId,
-    Guid? TargetUserId,
-    Guid? TargetMessageId,
-    Guid? RoomId,
-    string Reason,
-    string Status,
-    DateTimeOffset CreatedAtUtc,
-    Guid? ResolvedByUserId,
-    DateTimeOffset? ResolvedAtUtc,
-    string? ResolutionNote);
-
-public sealed record AuditLogDto(
-    Guid Id,
-    string Category,
-    string Action,
-    Guid? ActorUserId,
-    string? TargetType,
-    string? TargetId,
-    string? Details,
-    string? IpAddress,
-    string? Resource,
-    string? Operation,
-    string? HttpMethod,
-    string? RequestPath,
-    int? StatusCode,
-    long? DurationMs,
-    string? UserAgent,
-    string? CorrelationId,
-    string? Exception,
-    bool HasException,
-    DateTimeOffset CreatedAtUtc);
+    PagedResult<AdminUserDto> RecentUsers,
+    PagedResult<AdminRoomDto> ActiveRooms,
+    PagedResult<ReportDto> OpenReports);

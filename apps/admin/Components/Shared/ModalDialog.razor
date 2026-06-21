@@ -1,0 +1,38 @@
+@if (Open)
+{
+    <div class="modal-backdrop" @onclick="CancelAsync">
+        <div class="modal-card" role="dialog" aria-modal="true" @onclick:stopPropagation="true">
+            <header class="modal-head">
+                <h3>@Title</h3>
+            </header>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(Description))
+                {
+                    <p class="modal-description">@Description</p>
+                }
+                @ChildContent
+            </div>
+            <footer class="modal-foot">
+                <button type="button" class="ghost" @onclick="CancelAsync" disabled="@Busy">@CancelText</button>
+                <button type="button" class="@(Danger ? "danger" : "primary")" @onclick="ConfirmAsync" disabled="@(Busy || !CanConfirm)">@ConfirmText</button>
+            </footer>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public string ConfirmText { get; set; } = "OK";
+    [Parameter] public string CancelText { get; set; } = "Cancel";
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool Danger { get; set; }
+    [Parameter] public bool CanConfirm { get; set; } = true;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private Task ConfirmAsync() => Busy || !CanConfirm ? Task.CompletedTask : OnConfirm.InvokeAsync();
+    private Task CancelAsync() => Busy ? Task.CompletedTask : OnCancel.InvokeAsync();
+}

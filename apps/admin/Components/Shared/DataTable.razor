@@ -1,0 +1,60 @@
+@typeparam TItem
+
+<section class="panel">
+    <div class="panel-title">
+        <div class="panel-heading">
+            <h2>@Title</h2>
+            @if (!string.IsNullOrEmpty(Subtitle))
+            {
+                <span>@Subtitle</span>
+            }
+        </div>
+        @if (Toolbar is not null)
+        {
+            <div class="panel-tools">@Toolbar</div>
+        }
+    </div>
+
+    <div class="table-scroll">
+        <table>
+            <thead>
+                <tr>@HeaderTemplate</tr>
+            </thead>
+            <tbody>
+                @if (Loading)
+                {
+                    <tr><td colspan="@ColumnCount" class="table-state"><span class="loading-spinner" aria-hidden="true"></span></td></tr>
+                }
+                else if (Items is null || Items.Count == 0)
+                {
+                    <tr><td colspan="@ColumnCount" class="table-state">@EmptyText</td></tr>
+                }
+                else if (RowTemplate is not null)
+                {
+                    @foreach (var item in Items)
+                    {
+                        <tr @key="item">@RowTemplate(item)</tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Footer is not null)
+    {
+        <div class="panel-foot">@Footer</div>
+    }
+</section>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public int ColumnCount { get; set; } = 1;
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public string EmptyText { get; set; } = string.Empty;
+    [Parameter] public IReadOnlyList<TItem>? Items { get; set; }
+    [Parameter] public RenderFragment? HeaderTemplate { get; set; }
+    [Parameter] public RenderFragment<TItem>? RowTemplate { get; set; }
+    [Parameter] public RenderFragment? Toolbar { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+}
